@@ -104,18 +104,18 @@ redis
               }
 
             }
-            const categoryName = classifyTransaction(
+            const categoryId = await classifyTransaction(
               document.description ?? "",
               document.receipient ?? "",
               document.amount,
             );
-            document.category = categoryName as typeof document.category;
+            document.categoryId = categoryId
 
             documents.push(document);
           }
         }
       }
-      console.log("documents", documents);
+      
       if (documents.length > 0) {
         await db
           .insert(documentTable)
@@ -130,8 +130,7 @@ redis
             console.log(e);
           });
       }
-
-      Bun.file("output.json").write(JSON.stringify(documents, null, 2));
+      
       await updateWorkerHeartbeat();
     }
   })

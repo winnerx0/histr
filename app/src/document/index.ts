@@ -3,7 +3,7 @@ import { DocumentService } from "./service";
 import { DocumentModal } from "./model";
 import { and, count, desc, eq, gte, ilike, lte, sql, sum } from "drizzle-orm";
 import { db } from "../db";
-import { categoryEnum, documentTable } from "../db/schema";
+import { categoryTable, documentTable } from "../db/schema";
 import { redis } from "..";
 import { config } from "../config";
 
@@ -25,8 +25,6 @@ const normalizePagination = (limit?: string, offset?: string) => {
     };
 };
 
-const categoryValues = categoryEnum.enumValues;
-
 const buildTransactionFilters = (query: {
     search?: string;
     category?: string;
@@ -42,9 +40,9 @@ const buildTransactionFilters = (query: {
         );
     }
 
-    if (query.category && categoryValues.includes(query.category as never)) {
-        conditions.push(eq(documentTable.category, query.category as (typeof categoryValues)[number]));
-    }
+    // if (query.category && categoryValues.includes(query.category as never)) {
+    //     conditions.push(eq(documentTable.category, query.category as (typeof categoryValues)[number]));
+    // }
 
     if (query.startDate) {
         const date = new Date(query.startDate);
@@ -122,7 +120,8 @@ export const documentController = new Elysia()
             const [rows, [{ total }]] = await Promise.all([
                 db
                     .select()
-                    .from(documentTable)
+                .from(documentTable)
+                  .innerJoin(categoryTable, eq(documentTable.categoryId, categoryTable.id))
                     .where(where)
                     .orderBy(desc(documentTable.createdAt))
                     .limit(limit)
@@ -136,11 +135,11 @@ export const documentController = new Elysia()
             return {
                 data: rows.map((row) => ({
                     id: row.id,
-                    amount: toNumber(row.amount),
-                    receipient: row.receipient,
-                    description: row.description,
-                    category: row.category,
-                    createdAt: row.createdAt,
+                    amount: toNumber(row.documents.amount),
+                    receipient: row.documents.receipient,
+                    description: row.documents.description,
+                    category: row.categories.name,
+                    createdAt: row.documents.createdAt,
                 })),
                 pagination: {
                     limit,
@@ -197,13 +196,14 @@ export const documentController = new Elysia()
 
             const rows = await db
                 .select({
-                    category: documentTable.category,
+                    category: categoryTable.name,
                     total: sum(documentTable.amount),
                     count: count(),
                 })
-                .from(documentTable)
+              .from(documentTable)
+              .innerJoin(categoryTable, eq(documentTable.categoryId, categoryTable.id))
                 .where(where)
-                .groupBy(documentTable.category)
+                .groupBy(categoryTable.id)
                 .orderBy(desc(sum(documentTable.amount)));
 
             return {
