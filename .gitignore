@@ -15,6 +15,9 @@
 **/*.log
 **/*.bun
 
+# Java build artifacts
+**/target/
+
 # Local generated data
 app/output.json
 app/documents/
