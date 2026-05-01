@@ -1,0 +1,41 @@
+server:
+  port: 5000
+  servlet:
+    context-path: /
+
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    driver-class-name: org.postgresql.Driver
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  data:
+    redis:
+      url: ${REDIS_URL:redis://redis:6379}
+
+  ai:
+    embedding:
+      transformer:
+        onnx:
+          model-uri: https://huggingface.co/optimum/all-MiniLM-L6-v2/resolve/main/model.onnx
+        tokenizer:
+          uri: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json
+
+  servlet:
+    multipart:
+      max-file-size: 15MB
+      max-request-size: 15MB
+
+app:
+  upload-dir: ${UPLOAD_DIR:uploads}
+  max-upload-size-mb: ${MAX_UPLOAD_SIZE_MB:15}
+  worker-heartbeat-key: ${WORKER_HEARTBEAT_KEY:worker:heartbeat}
+  worker-processed-count-key: ${WORKER_PROCESSED_COUNT_KEY:worker:processed_count}

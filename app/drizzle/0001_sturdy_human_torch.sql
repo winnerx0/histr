@@ -1,1 +1,0 @@
-ALTER TABLE "categories" ADD COLUMN "embeddings" vector(384) NOT NULL;

@@ -71,9 +71,9 @@ jobs:
             fi
 
             cd "$DEPLOY_DIR"
-            docker compose --profile dev down --remove-orphans
-            docker compose --profile dev build --no-cache
-            docker compose --profile dev up -d
+            docker compose down --remove-orphans
+            docker compose build --no-cache
+            docker compose up -d
             sleep 5
-            docker compose --profile dev ps
-            docker compose --profile dev logs --tail=20
+            docker compose ps
+            docker compose logs --tail=20

@@ -38,7 +38,7 @@ export type WorkerStatusResponse = {
 };
 
 const apiBase =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5000/api/v1";
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:80/api/v1";
 
 const asQuery = (params: Record<string, string | number | undefined>) => {
   const query = new URLSearchParams();
