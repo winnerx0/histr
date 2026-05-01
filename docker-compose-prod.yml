@@ -1,25 +1,4 @@
 services:
-
-  postgres:
-    image: pgvector/pgvector:0.8.2-pg18-trixie
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-histr}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/18/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    networks:
-      - internal
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-histr}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -37,9 +16,9 @@ services:
     build: ./histr-api
     restart: unless-stopped
     environment:
-      DATABASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-histr}
-      DATABASE_USERNAME: ${POSTGRES_USER:-postgres}
-      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      DATABASE_URL: ${DATABASE_URL}
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-384}
@@ -50,8 +29,6 @@ services:
     volumes:
       - uploads_data:/app/uploads
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     networks:
@@ -81,7 +58,6 @@ services:
     entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
 
 volumes:
-  postgres_data:
   redis_data:
   uploads_data:
   certbot_certs:
