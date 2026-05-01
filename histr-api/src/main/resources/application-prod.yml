@@ -22,12 +22,12 @@ spring:
       url: ${REDIS_URL:redis://redis:6379}
 
   ai:
-    embedding:
-      transformer:
-        onnx:
-          model-uri: https://huggingface.co/optimum/all-MiniLM-L6-v2/resolve/main/model.onnx
-        tokenizer:
-          uri: https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2/resolve/main/tokenizer.json
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      embedding:
+        options:
+          model: text-embedding-3-small
+          dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:384}
 
   servlet:
     multipart:

@@ -41,6 +41,8 @@ services:
       DATABASE_USERNAME: postgres
       DATABASE_PASSWORD: password
       REDIS_URL: redis://redis:6379
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-384}
       SERVER_PORT: 8080
       UPLOAD_DIR: /app/uploads
     volumes:
@@ -81,7 +83,7 @@ volumes:
   redis_data:
   uploads_data:
   certbot_certs:
-    external: true
+#    external: true
   certbot_webroot:
 
 networks:

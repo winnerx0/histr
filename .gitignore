@@ -27,3 +27,5 @@ cluster/venv/
 
 # OS/editor noise
 .DS_Store
+
+documents/

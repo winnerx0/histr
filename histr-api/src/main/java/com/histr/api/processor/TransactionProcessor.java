@@ -6,6 +6,7 @@ import com.histr.api.model.Document;
 import com.histr.api.repository.CategoryRepository;
 import com.histr.api.repository.DocumentRepository;
 import com.histr.api.service.ClassifierService;
+import com.histr.api.service.ClassifierService.TransactionClassificationInput;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
@@ -159,24 +160,30 @@ public class TransactionProcessor {
                 continue;
             }
 
-            try {
-                UUID categoryId = classifierService.classifyTransaction(
-                        doc.getDescription(),
-                        doc.getRecipient(),
-                        doc.getAmount().doubleValue()
-                );
-                doc.setCategory(categoryRepository.getReferenceById(categoryId));
-            } catch (Exception e) {
-                log.warn("Classification failed for '{}': {}", doc.getDescription(), e.getMessage());
-            }
-
             documents.add(doc);
-
-            documentRepository.save(doc);
-            redis.opsForValue().increment(processedCountKey, documents.size());
-            log.info("Processed {} transactions", documents.size());
         }
 
+        if (documents.isEmpty()) return;
+
+        try {
+            List<TransactionClassificationInput> classificationInputs = documents.stream()
+                    .map(doc -> new TransactionClassificationInput(
+                            doc.getDescription(),
+                            doc.getRecipient(),
+                            doc.getAmount().doubleValue()
+                    ))
+                    .toList();
+            List<UUID> categoryIds = classifierService.classifyTransactions(classificationInputs);
+            for (int i = 0; i < documents.size(); i++) {
+                documents.get(i).setCategory(categoryRepository.getReferenceById(categoryIds.get(i)));
+            }
+        } catch (Exception e) {
+            log.warn("Batch classification failed: {}", e.getMessage());
+        }
+
+        documentRepository.saveAll(documents);
+        redis.opsForValue().increment(processedCountKey, documents.size());
+        log.info("Processed {} transactions", documents.size());
     }
 
     private OffsetDateTime parseDate(String value) {
