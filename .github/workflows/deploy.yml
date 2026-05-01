@@ -67,7 +67,10 @@ jobs:
               git -C "$DEPLOY_DIR" fetch origin
               git -C "$DEPLOY_DIR" reset --hard origin/$BRANCH
             else
-              git clone --branch "$BRANCH" "$REPO" "$DEPLOY_DIR"
+              git -C "$DEPLOY_DIR" init
+              git -C "$DEPLOY_DIR" remote add origin "$REPO"
+              git -C "$DEPLOY_DIR" fetch origin "$BRANCH"
+              git -C "$DEPLOY_DIR" checkout -B "$BRANCH" "origin/$BRANCH"
             fi
 
             cd "$DEPLOY_DIR"
