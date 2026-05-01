@@ -15,10 +15,30 @@ import {
 
 const PAGE_SIZE = 15;
 const PIE_COLORS = [
-  "#6d4fe8", "#1253c4", "#0a7a40", "#b87200", "#c4233e", "#0ea5e9",
-  "#7c3aed", "#0891b2", "#15803d", "#d97706", "#be123c", "#0284c7",
-  "#6366f1", "#059669", "#ea580c", "#7e22ce", "#0e7490", "#dc2626",
-  "#4f46e5", "#16a34a", "#ca8a04", "#9333ea", "#0369a1", "#b91c1c",
+  "#6d4fe8",
+  "#1253c4",
+  "#0a7a40",
+  "#b87200",
+  "#c4233e",
+  "#0ea5e9",
+  "#7c3aed",
+  "#0891b2",
+  "#15803d",
+  "#d97706",
+  "#be123c",
+  "#0284c7",
+  "#6366f1",
+  "#059669",
+  "#ea580c",
+  "#7e22ce",
+  "#0e7490",
+  "#dc2626",
+  "#4f46e5",
+  "#16a34a",
+  "#ca8a04",
+  "#9333ea",
+  "#0369a1",
+  "#b91c1c",
 ];
 
 const formatCurrency = (amount: number) =>
@@ -68,7 +88,9 @@ export function App() {
   const uploadMutation = useMutation({
     mutationFn: uploadTransactionDocument,
     onSuccess: (payload) => {
-      setUploadMessage(`${payload.message} (${payload.queuedBatches} batch queued)`);
+      setUploadMessage(
+        `${payload.message} (${payload.queuedBatches} batch queued)`,
+      );
       setSelectedFile(null);
       void queryClient.invalidateQueries({ queryKey: ["worker-status"] });
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
@@ -76,7 +98,9 @@ export function App() {
       void queryClient.invalidateQueries({ queryKey: ["category-summary"] });
     },
     onError: (error) => {
-      setUploadMessage(error instanceof Error ? error.message : "Upload failed");
+      setUploadMessage(
+        error instanceof Error ? error.message : "Upload failed",
+      );
     },
   });
 
@@ -96,7 +120,10 @@ export function App() {
   }, [summaryQuery.data?.data]);
 
   const pieSegments = useMemo(() => {
-    const total = topCategories.reduce((sum, item) => sum + Math.abs(item.total), 0);
+    const total = topCategories.reduce(
+      (sum, item) => sum + Math.abs(item.total),
+      0,
+    );
     if (total === 0) return [];
 
     let cursor = 0;
@@ -133,203 +160,249 @@ export function App() {
   }, [statusQuery.data?.workerHeartbeat]);
 
   return (
-    <div className="page-shell">
-      <main className="dashboard">
-        <header className="header">
-          <p className="eyebrow">Financial Intelligence</p>
-          <h1>Histr</h1>
-          <p className="subtitle">
-            Upload statements, track spending, and monitor processing.
-            <span className={`live-pill ${workerIsLive ? "is-live" : "is-idle"}`}>
-              {workerIsLive ? "Worker Online" : "Worker Waiting"}
-            </span>
-          </p>
-        </header>
-
-        <section className="kpi-grid">
-          <article className="kpi-card income-card">
-            <h3>Total Income</h3>
-            <p>{formatCurrency(statsQuery.data?.totalIncome ?? 0)}</p>
-          </article>
-          <article className="kpi-card expense-card">
-            <h3>Total Expense</h3>
-            <p>{formatCurrency(statsQuery.data?.totalExpense ?? 0)}</p>
-          </article>
-          <article className="kpi-card net-card">
-            <h3>Net Balance</h3>
-            <p>{formatCurrency(statsQuery.data?.netTotal ?? 0)}</p>
-          </article>
-          <article className="kpi-card count-card">
-            <h3>Transactions</h3>
-            <p>{statsQuery.data?.transactionCount ?? 0}</p>
-          </article>
-        </section>
-
-        <section className="middle-grid">
-          <article className="panel status-panel">
-            <h2 className="panel-title">Processing Status</h2>
-            <dl className="status-grid">
-              <div className="status-row">
-                <dt>Queue depth</dt>
-                <dd>{statusQuery.data?.queueDepth ?? 0}</dd>
+    <div className="app-frame">
+      <div className="page-shell">
+        <main className="dashboard">
+          <header className="dashboard-header">
+            <div className="brand-block">
+              <span className="brand-mark">H</span>
+              <div>
+                <p className="eyebrow">Financial Intelligence</p>
+                <h1>Histr</h1>
               </div>
-              <div className="status-row">
-                <dt>Processed</dt>
-                <dd>{statusQuery.data?.processedCount ?? 0}</dd>
-              </div>
-              <div className="status-row">
-                <dt>Heartbeat</dt>
-                <dd>{statusQuery.data?.workerHeartbeat ?? "—"}</dd>
-              </div>
-            </dl>
-          </article>
+            </div>
+            <div className="header-meta">
+              <span
+                className={`live-pill ${workerIsLive ? "is-live" : "is-idle"}`}
+              >
+                {workerIsLive ? "Worker Online" : "Worker Waiting"}
+              </span>
+              <p>Upload statements, track spending, and monitor processing.</p>
+            </div>
+          </header>
 
-          <article className="panel">
-            <h2 className="panel-title">Top Categories</h2>
-            <div className="category-chart">
-              <div className="pie-chart" style={{ background: pieBackground }}>
-                <div className="pie-center">
-                  <span>Total</span>
-                  <strong>
-                    {formatCurrency(
-                      pieSegments.reduce((sum, s) => sum + s.value, 0),
-                    )}
-                  </strong>
+          <section className="kpi-grid">
+            <article className="kpi-card income-card">
+              <h3>Total Income</h3>
+              <p>{formatCurrency(statsQuery.data?.totalIncome ?? 0)}</p>
+            </article>
+            <article className="kpi-card expense-card">
+              <h3>Total Expense</h3>
+              <p>{formatCurrency(statsQuery.data?.totalExpense ?? 0)}</p>
+            </article>
+            <article className="kpi-card net-card">
+              <h3>Net Balance</h3>
+              <p>{formatCurrency(statsQuery.data?.netTotal ?? 0)}</p>
+            </article>
+            <article className="kpi-card count-card">
+              <h3>Transactions</h3>
+              <p>{statsQuery.data?.transactionCount ?? 0}</p>
+            </article>
+          </section>
+
+          <section className="dashboard-workspace">
+            <aside className="insight-rail">
+              <section className="panel upload-panel">
+                <div className="panel-heading">
+                  <h2 className="panel-title">Upload</h2>
+                  <span className="panel-kicker">.xlsx / .csv</span>
+                </div>
+                <label
+                  className={`file-picker ${isDragOver ? "drag-over" : ""}`}
+                  htmlFor="file-input"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(false);
+                    const file = e.dataTransfer.files?.[0] ?? null;
+                    setSelectedFile(file);
+                    setUploadMessage("");
+                  }}
+                >
+                  {selectedFile ? selectedFile.name : "Drop or browse file"}
+                </label>
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".xlsx,.csv"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] ?? null;
+                    setSelectedFile(file);
+                    setUploadMessage("");
+                  }}
+                />
+                <button
+                  className="primary-btn"
+                  disabled={!selectedFile || uploadMutation.isPending}
+                  onClick={() => {
+                    if (selectedFile) uploadMutation.mutate(selectedFile);
+                  }}
+                >
+                  {uploadMutation.isPending ? "Uploading…" : "Upload & Queue"}
+                </button>
+                {uploadMessage ? (
+                  <p className="upload-message">{uploadMessage}</p>
+                ) : null}
+              </section>
+
+              <section className="panel status-panel">
+                <div className="panel-heading">
+                  <h2 className="panel-title">Processing</h2>
+                  <span className="panel-kicker">
+                    {workerIsLive ? "Live" : "Idle"}
+                  </span>
+                </div>
+                <dl className="status-grid">
+                  <div className="status-row">
+                    <dt>Queue depth</dt>
+                    <dd>{statusQuery.data?.queueDepth ?? 0}</dd>
+                  </div>
+                  <div className="status-row">
+                    <dt>Processed</dt>
+                    <dd>{statusQuery.data?.processedCount ?? 0}</dd>
+                  </div>
+                  <div className="status-row">
+                    <dt>Heartbeat</dt>
+                    <dd>{statusQuery.data?.workerHeartbeat ?? "—"}</dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section className="panel category-panel">
+                <div className="panel-heading">
+                  <h2 className="panel-title">Top Categories</h2>
+                  <span className="panel-kicker">{pieSegments.length}</span>
+                </div>
+                <div className="category-chart">
+                  <div
+                    className="pie-chart"
+                    style={{ background: pieBackground }}
+                  >
+                    <div className="pie-center">
+                      <span>Total</span>
+                      <strong>
+                        {formatCurrency(
+                          pieSegments.reduce((sum, s) => sum + s.value, 0),
+                        )}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="pie-legend">
+                    {pieSegments.map((segment) => (
+                      <div key={segment.category} className="legend-item">
+                        <span
+                          className="legend-dot"
+                          style={{ backgroundColor: segment.color }}
+                        />
+                        <span className="legend-label">{segment.category}</span>
+                        <span className="legend-value">
+                          {Math.round(segment.percentage)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </aside>
+
+            <section className="panel transactions-panel">
+              <div className="table-header">
+                <div>
+                  <h2 className="panel-title">Transactions</h2>
+                  <p className="table-subtitle">
+                    {transactionsQuery.data?.pagination.total ?? 0} records
+                    loaded
+                  </p>
+                </div>
+                <div className="filters">
+                  <input
+                    placeholder="Search description or recipient"
+                    value={search}
+                    onChange={(event) => {
+                      setOffset(0);
+                      setSearch(event.target.value);
+                    }}
+                  />
+                  <select
+                    value={category}
+                    onChange={(event) => {
+                      setOffset(0);
+                      setCategory(event.target.value);
+                    }}
+                  >
+                    <option value="">All categories</option>
+                    {categories.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div className="pie-legend">
-                {pieSegments.map((segment) => (
-                  <div key={segment.category} className="legend-item">
-                    <span className="legend-dot" style={{ backgroundColor: segment.color }} />
-                    <span className="legend-label">{segment.category}</span>
-                    <span className="legend-value">
-                      {Math.round(segment.percentage)}%
-                    </span>
-                  </div>
-                ))}
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Recipient</th>
+                      <th>Category</th>
+                      <th>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(transactionsQuery.data?.data ?? []).map((item) => (
+                      <tr key={item.id}>
+                        <td>{new Date(item.createdAt).toLocaleDateString()}</td>
+                        <td>{item.description}</td>
+                        <td>{item.receipient ?? "—"}</td>
+                        <td>
+                          <span className="category-tag">{item.category}</span>
+                        </td>
+                        <td>
+                          <span
+                            className={`amount-pill ${item.amount < 0 ? "negative" : "positive"}`}
+                          >
+                            {formatCurrency(item.amount)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          </article>
-        </section>
 
-        <section className="upload-panel upload-panel--row">
-          <div className="upload-panel__info">
-            <h2>Upload Transaction File</h2>
-            <p>Supports .xlsx and .csv files.</p>
-          </div>
-          <label
-            className={`file-picker ${isDragOver ? "drag-over" : ""}`}
-            htmlFor="file-input"
-            onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
-            onDragLeave={() => setIsDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setIsDragOver(false);
-              const file = e.dataTransfer.files?.[0] ?? null;
-              setSelectedFile(file);
-              setUploadMessage("");
-            }}
-          >
-            {selectedFile ? selectedFile.name : "Drop file here or click to browse"}
-          </label>
-          <input
-            id="file-input"
-            type="file"
-            accept=".xlsx,.csv"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null;
-              setSelectedFile(file);
-              setUploadMessage("");
-            }}
-          />
-          <button
-            className="primary-btn"
-            disabled={!selectedFile || uploadMutation.isPending}
-            onClick={() => {
-              if (selectedFile) uploadMutation.mutate(selectedFile);
-            }}
-          >
-            {uploadMutation.isPending ? "Uploading…" : "Upload & Queue"}
-          </button>
-          {uploadMessage ? <p className="upload-message">{uploadMessage}</p> : null}
-        </section>
-
-        <section className="panel transactions-panel">
-          <div className="table-header">
-            <h2 className="panel-title">Transactions</h2>
-            <div className="filters">
-              <input
-                placeholder="Search description or recipient"
-                value={search}
-                onChange={(event) => {
-                  setOffset(0);
-                  setSearch(event.target.value);
-                }}
-              />
-              <select
-                value={category}
-                onChange={(event) => {
-                  setOffset(0);
-                  setCategory(event.target.value);
-                }}
-              >
-                <option value="">All categories</option>
-                {categories.map((item) => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Recipient</th>
-                  <th>Category</th>
-                  <th>Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(transactionsQuery.data?.data ?? []).map((item) => (
-                  <tr key={item.id}>
-                    <td>{new Date(item.createdAt).toLocaleDateString()}</td>
-                    <td>{item.description}</td>
-                    <td>{item.receipient ?? "—"}</td>
-                    <td><span className="category-tag">{item.category}</span></td>
-                    <td>
-                      <span className={`amount-pill ${item.amount < 0 ? "negative" : "positive"}`}>
-                        {formatCurrency(item.amount)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="pagination">
-            <button
-              className="secondary-btn"
-              disabled={currentPage <= 1}
-              onClick={() => setOffset((previous) => Math.max(previous - PAGE_SIZE, 0))}
-            >
-              ← Previous
-            </button>
-            <span>Page {currentPage} / {totalPages}</span>
-            <button
-              className="secondary-btn"
-              disabled={currentPage >= totalPages}
-              onClick={() => setOffset((previous) => previous + PAGE_SIZE)}
-            >
-              Next →
-            </button>
-          </div>
-        </section>
-      </main>
+              <div className="pagination">
+                <button
+                  className="secondary-btn"
+                  disabled={currentPage <= 1}
+                  onClick={() =>
+                    setOffset((previous) => Math.max(previous - PAGE_SIZE, 0))
+                  }
+                >
+                  ← Previous
+                </button>
+                <span>
+                  Page {currentPage} / {totalPages}
+                </span>
+                <button
+                  className="secondary-btn"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setOffset((previous) => previous + PAGE_SIZE)}
+                >
+                  Next →
+                </button>
+              </div>
+            </section>
+          </section>
+        </main>
+      </div>
     </div>
   );
 }
