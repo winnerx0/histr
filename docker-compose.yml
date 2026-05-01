@@ -83,7 +83,7 @@ volumes:
   redis_data:
   uploads_data:
   certbot_certs:
-#    external: true
+    external: true
   certbot_webroot:
 
 networks:
