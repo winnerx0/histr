@@ -1,0 +1,79 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  test-backend:
+    name: Test Java backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: histr-api
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run unit tests
+        run: mvn test
+
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: test-backend
+    environment: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure app directory exists
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: mkdir -p ${{ secrets.VPS_APP_DIR || '/opt/histr' }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+            REPO="git@github.com:winnerx0/histr.git"
+            BRANCH="main"
+            DEPLOY_DIR="${{ secrets.VPS_APP_DIR || '/opt/histr' }}"
+
+            if [ -d "$DEPLOY_DIR/.git" ]; then
+              git -C "$DEPLOY_DIR" fetch origin
+              git -C "$DEPLOY_DIR" reset --hard origin/$BRANCH
+            else
+              git clone --branch "$BRANCH" "$REPO" "$DEPLOY_DIR"
+            fi
+
+            cd "$DEPLOY_DIR"
+            docker compose --profile dev down --remove-orphans
+            docker compose --profile dev build --no-cache
+            docker compose --profile dev up -d
+            sleep 5
+            docker compose --profile dev ps
+            docker compose --profile dev logs --tail=20
