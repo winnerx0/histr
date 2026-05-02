@@ -34,8 +34,6 @@ spring:
     multipart:
       max-file-size: 15MB
       max-request-size: 15MB
-  profiles:
-    active: prod
 
 app:
   upload-dir: ${UPLOAD_DIR:uploads}
