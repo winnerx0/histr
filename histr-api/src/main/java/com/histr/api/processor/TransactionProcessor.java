@@ -110,7 +110,7 @@ public class TransactionProcessor {
         for (int i = 0; i < data.size(); i++) {
             List<String> row = data.get(i);
             log.info("data {}", row);
-            if (!row.isEmpty() && row.getFirst() != null && row.get(2).toLowerCase().contains("date")) {
+            if (firstDateHeaderIndex(row) != -1) {
                 headerRowIndex = i;
                 break;
             }
@@ -197,6 +197,19 @@ public class TransactionProcessor {
             } catch (DateTimeParseException ignored) {}
         }
         return null;
+    }
+
+    private int firstDateHeaderIndex(List<String> row) {
+        if (row == null || row.isEmpty()) return -1;
+
+        for (int i = 0; i < row.size(); i++) {
+            String cell = row.get(i);
+            if (cell != null && cell.toLowerCase().contains("date")) {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     private BigDecimal parseCurrency(String value) {
