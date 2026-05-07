@@ -50,14 +50,6 @@ services:
     networks:
       - internal
 
-  certbot:
-    image: certbot/certbot:latest
-    restart: unless-stopped
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - certbot_webroot:/var/www/certbot
-    entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
-
 volumes:
   redis_data:
   uploads_data:
