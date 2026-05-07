@@ -4,50 +4,57 @@ on:
     push:
         branches:
             - main
-
+    workflow_dispatch:
 jobs:
-    Deploy:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v3
-            - name: Setup Java
-              uses: actions/setup-java@v5
-              with:
-                  java-version: '21'
-                  distribution: 'temurin'
-                  cache: 'maven'
-            - name: Build with Maven
-              working-directory: 'histr-api'
-              run: mvn clean install -DskipTests
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v4
-            - name: Cache Docker layers
-              uses: actions/cache@v5
-              with:
-                  path: /tmp/.buildx-cache
-                  key: ${{ runner.os }}-buildx-${{ github.sha }}
-                  restore-keys: ${{ runner.os }}-buildx-
-            - name: Log in to Docker Hub
-              uses: docker/login-action@v4
-              with:
-                  username: ${{ secrets.DOCKER_USERNAME }}
-                  password: ${{ secrets.DOCKERHUB_TOKEN }}
+  dummy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dummy step
+        run: echo "This is a placeholder job. Please replace it with actual deployment steps."
 
-            - name: Extract metadata
-              id: meta
-              run: |
-                  echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_OUTPUT"
-                  echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+# jobs:
+#     Deploy:
+#         runs-on: ubuntu-latest
+#         steps:
+#             - name: Checkout code
+#               uses: actions/checkout@v3
+#             - name: Setup Java
+#               uses: actions/setup-java@v5
+#               with:
+#                   java-version: '21'
+#                   distribution: 'temurin'
+#                   cache: 'maven'
+#             - name: Build with Maven
+#               working-directory: 'histr-api'
+#               run: mvn clean install -DskipTests
+#             - name: Set up Docker Buildx
+#               uses: docker/setup-buildx-action@v4
+#             - name: Cache Docker layers
+#               uses: actions/cache@v5
+#               with:
+#                   path: /tmp/.buildx-cache
+#                   key: ${{ runner.os }}-buildx-${{ github.sha }}
+#                   restore-keys: ${{ runner.os }}-buildx-
+#             - name: Log in to Docker Hub
+#               uses: docker/login-action@v4
+#               with:
+#                   username: ${{ secrets.DOCKER_USERNAME }}
+#                   password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-            - name: Build and push production image
-              uses: docker/build-push-action@v7
-              with:
-                  context: ./histr-api
-                  file: ./histr-api/Dockerfile
-                  push: true
-                  platforms: linux/amd64,linux/arm64
-                  tags: |
-                      ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
-                      ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
-                  cache-from: type=local,src=/tmp/.buildx-cache
+#             - name: Extract metadata
+#               id: meta
+#               run: |
+#                   echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> "$GITHUB_OUTPUT"
+#                   echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+#             - name: Build and push production image
+#               uses: docker/build-push-action@v7
+#               with:
+#                   context: ./histr-api
+#                   file: ./histr-api/Dockerfile
+#                   push: true
+#                   platforms: linux/amd64,linux/arm64
+#                   tags: |
+#                       ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
+#                       ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
+#                   cache-from: type=local,src=/tmp/.buildx-cache
