@@ -55,8 +55,8 @@ jobs:
 
       - name: Setup SSH
         env:
-          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
-          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          TUNNEL_SERVICE_TOKEN_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          TUNNEL_SERVICE_TOKEN_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
         run: |
           mkdir -p ~/.ssh
 
@@ -68,7 +68,7 @@ jobs:
               HostName ssh.winnerx0.dev
               User winner
               IdentityFile ~/.ssh/deploy_key
-              ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ACCESS_CLIENT_ID --service-token-secret $CF_ACCESS_CLIENT_SECRET
+              ProxyCommand cloudflared access ssh --hostname %h
               StrictHostKeyChecking no
           EOF
 
