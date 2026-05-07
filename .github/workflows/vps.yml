@@ -66,7 +66,7 @@ jobs:
           cat > ~/.ssh/config <<EOF
           Host home-server
               HostName ssh.winnerx0.dev
-              User deploy
+              User winner
               IdentityFile ~/.ssh/deploy_key
               ProxyCommand cloudflared access ssh --hostname %h --service-token-id $CF_ACCESS_CLIENT_ID --service-token-secret $CF_ACCESS_CLIENT_SECRET
               StrictHostKeyChecking no
