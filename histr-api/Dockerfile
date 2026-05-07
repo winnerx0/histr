@@ -10,5 +10,5 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx512m"
-EXPOSE 3000
+EXPOSE 5000
 ENTRYPOINT ["java", "-jar", "app.jar"]
