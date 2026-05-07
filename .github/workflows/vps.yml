@@ -75,41 +75,36 @@ jobs:
           chmod 600 ~/.ssh/config
 
       - name: Ensure app directory exists
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: mkdir -p ${{ secrets.VPS_APP_DIR || '/opt/histr' }}
+        run: |
+          ssh home-server "
+          mkdir -p ${{ secrets.VPS_APP_DIR || '/opt/histr' }}
+          "
 
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -euo pipefail
-            REPO="git@github.com:winnerx0/histr.git"
-            BRANCH="main"
-            DEPLOY_DIR="${{ secrets.VPS_APP_DIR || '/opt/histr' }}"
-            COMPOSE_FILE="docker-compose-prod.yml"
+        run: |
+          ssh home-server bash <<'EOF'
+          set -euo pipefail
+          REPO="git@github.com:winnerx0/histr.git"
+          BRANCH="main"
+          DEPLOY_DIR="${{ secrets.VPS_APP_DIR || '/opt/histr' }}"
+          COMPOSE_FILE="docker-compose-prod.yml"
 
-            if [ -d "$DEPLOY_DIR/.git" ]; then
-              git -C "$DEPLOY_DIR" fetch origin
-              git -C "$DEPLOY_DIR" reset --hard origin/$BRANCH
-            else
-              git -C "$DEPLOY_DIR" init
-              git -C "$DEPLOY_DIR" remote add origin "$REPO"
-              git -C "$DEPLOY_DIR" fetch origin "$BRANCH"
-              git -C "$DEPLOY_DIR" checkout -B "$BRANCH" "origin/$BRANCH"
-            fi
+          if [ -d "$DEPLOY_DIR/.git" ]; then
+            git -C "$DEPLOY_DIR" fetch origin
+            git -C "$DEPLOY_DIR" reset --hard origin/$BRANCH
+          else
+            git -C "$DEPLOY_DIR" init
+            git -C "$DEPLOY_DIR" remote add origin "$REPO"
+            git -C "$DEPLOY_DIR" fetch origin "$BRANCH"
+            git -C "$DEPLOY_DIR" checkout -B "$BRANCH" "origin/$BRANCH"
+          fi
 
-            cd "$DEPLOY_DIR"
-            docker volume create certbot_certs >/dev/null
-            docker compose -f "$COMPOSE_FILE" down --remove-orphans
-            docker compose -f "$COMPOSE_FILE" build --no-cache
-            docker compose -f "$COMPOSE_FILE" up -d
-            sleep 5
-            docker compose -f "$COMPOSE_FILE" ps
-            docker compose -f "$COMPOSE_FILE" logs --tail=20
+          cd "$DEPLOY_DIR"
+          docker volume create certbot_certs >/dev/null
+          docker compose -f "$COMPOSE_FILE" down --remove-orphans
+          docker compose -f "$COMPOSE_FILE" build --no-cache
+          docker compose -f "$COMPOSE_FILE" up -d
+          sleep 5
+          docker compose -f "$COMPOSE_FILE" ps
+          docker compose -f "$COMPOSE_FILE" logs --tail=20
+          EOF
