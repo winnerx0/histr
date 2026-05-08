@@ -10,8 +10,10 @@ import {
   fetchStats,
   fetchTransactions,
   fetchWorkerStatus,
+  parseLocalDocuments,
   uploadTransactionDocument,
 } from "./api";
+import { useAuth } from "./auth";
 
 const PAGE_SIZE = 15;
 const PIE_COLORS = [
@@ -50,21 +52,20 @@ const formatCurrency = (amount: number) =>
 
 export function App() {
   const queryClient = useQueryClient();
-  const [offset, setOffset] = useState(0);
+  const { username, logout } = useAuth();
+  const [pageNo, setPageNo] = useState(0);
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMessage, setUploadMessage] = useState<string>("");
   const [isDragOver, setIsDragOver] = useState(false);
 
   const transactionsQuery = useQuery({
-    queryKey: ["transactions", offset, search, category],
+    queryKey: ["transactions", pageNo, search],
     queryFn: () =>
       fetchTransactions({
         limit: PAGE_SIZE,
-        offset,
+        pageNo,
         search,
-        category: category || undefined,
       }),
     placeholderData: keepPreviousData,
   });
@@ -85,6 +86,13 @@ export function App() {
     refetchInterval: 4000,
   });
 
+  const invalidateData = () => {
+    void queryClient.invalidateQueries({ queryKey: ["worker-status"] });
+    void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    void queryClient.invalidateQueries({ queryKey: ["stats"] });
+    void queryClient.invalidateQueries({ queryKey: ["category-summary"] });
+  };
+
   const uploadMutation = useMutation({
     mutationFn: uploadTransactionDocument,
     onSuccess: (payload) => {
@@ -92,14 +100,26 @@ export function App() {
         `${payload.message} (${payload.queuedBatches} batch queued)`,
       );
       setSelectedFile(null);
-      void queryClient.invalidateQueries({ queryKey: ["worker-status"] });
-      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      void queryClient.invalidateQueries({ queryKey: ["stats"] });
-      void queryClient.invalidateQueries({ queryKey: ["category-summary"] });
+      invalidateData();
     },
     onError: (error) => {
       setUploadMessage(
         error instanceof Error ? error.message : "Upload failed",
+      );
+    },
+  });
+
+  const parseMutation = useMutation({
+    mutationFn: parseLocalDocuments,
+    onSuccess: (payload) => {
+      setUploadMessage(
+        `${payload.message} (${payload.queuedBatches} batches queued)`,
+      );
+      invalidateData();
+    },
+    onError: (error) => {
+      setUploadMessage(
+        error instanceof Error ? error.message : "Parse failed",
       );
     },
   });
@@ -109,11 +129,7 @@ export function App() {
     return Math.max(Math.ceil(total / PAGE_SIZE), 1);
   }, [transactionsQuery.data?.pagination.total]);
 
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
-
-  const categories = useMemo(() => {
-    return (summaryQuery.data?.data ?? []).map((item) => item.category);
-  }, [summaryQuery.data?.data]);
+  const currentPage = pageNo + 1;
 
   const topCategories = useMemo(() => {
     return summaryQuery.data?.data ?? [];
@@ -167,7 +183,7 @@ export function App() {
             <div className="brand-block">
               <span className="brand-mark">H</span>
               <div>
-                <p className="eyebrow">Financial Intelligence</p>
+                <p className="eyebrow">Financial Dashboard</p>
                 <h1>Histr</h1>
               </div>
             </div>
@@ -175,9 +191,12 @@ export function App() {
               <span
                 className={`live-pill ${workerIsLive ? "is-live" : "is-idle"}`}
               >
-                {workerIsLive ? "Worker Online" : "Worker Waiting"}
+                {workerIsLive ? "Worker online" : "Worker idle"}
               </span>
-              <p>Upload statements, track spending, and monitor processing.</p>
+              {username && <span className="user-pill">{username}</span>}
+              <button className="secondary-btn" onClick={logout}>
+                Sign out
+              </button>
             </div>
           </header>
 
@@ -242,7 +261,19 @@ export function App() {
                     if (selectedFile) uploadMutation.mutate(selectedFile);
                   }}
                 >
-                  {uploadMutation.isPending ? "Uploading…" : "Upload & Queue"}
+                  {uploadMutation.isPending ? "Uploading…" : "Upload"}
+                </button>
+                <button
+                  className="secondary-btn"
+                  disabled={parseMutation.isPending}
+                  onClick={() => {
+                    setUploadMessage("");
+                    parseMutation.mutate();
+                  }}
+                >
+                  {parseMutation.isPending
+                    ? "Parsing…"
+                    : "Parse local documents"}
                 </button>
                 {uploadMessage ? (
                   <p className="upload-message">{uploadMessage}</p>
@@ -316,7 +347,6 @@ export function App() {
                   <h2 className="panel-title">Transactions</h2>
                   <p className="table-subtitle">
                     {transactionsQuery.data?.pagination.total ?? 0} records
-                    loaded
                   </p>
                 </div>
                 <div className="filters">
@@ -324,24 +354,10 @@ export function App() {
                     placeholder="Search description or recipient"
                     value={search}
                     onChange={(event) => {
-                      setOffset(0);
+                      setPageNo(0);
                       setSearch(event.target.value);
                     }}
                   />
-                  <select
-                    value={category}
-                    onChange={(event) => {
-                      setOffset(0);
-                      setCategory(event.target.value);
-                    }}
-                  >
-                    <option value="">All categories</option>
-                    {categories.map((item) => (
-                      <option key={item} value={item}>
-                        {item}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
 
@@ -361,7 +377,7 @@ export function App() {
                       <tr key={item.id}>
                         <td>{new Date(item.createdAt).toLocaleDateString()}</td>
                         <td>{item.description}</td>
-                        <td>{item.receipient ?? "—"}</td>
+                        <td>{item.recipient ?? "—"}</td>
                         <td>
                           <span className="category-tag">{item.category}</span>
                         </td>
@@ -383,18 +399,18 @@ export function App() {
                   className="secondary-btn"
                   disabled={currentPage <= 1}
                   onClick={() =>
-                    setOffset((previous) => Math.max(previous - PAGE_SIZE, 0))
+                    setPageNo((previous) => Math.max(previous - 1, 0))
                   }
                 >
                   ← Previous
                 </button>
                 <span>
-                  Page {currentPage} / {totalPages}
+                  Page {currentPage} of {totalPages}
                 </span>
                 <button
                   className="secondary-btn"
                   disabled={currentPage >= totalPages}
-                  onClick={() => setOffset((previous) => previous + PAGE_SIZE)}
+                  onClick={() => setPageNo((previous) => previous + 1)}
                 >
                   Next →
                 </button>
