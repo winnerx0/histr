@@ -3,6 +3,7 @@ package com.histr.api.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.histr.api.dto.*;
 import com.histr.api.model.Document;
+import com.histr.api.model.User;
 import com.histr.api.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,6 +27,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +63,9 @@ public class DocumentService {
             for (File file : files) {
                 List<List<String>> data = parseFile(file.toPath(), file.getName());
                 if (!data.isEmpty()) {
-                    pushToQueue(data);
+                    User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+                    Map.Entry<String, List<List<String>>> userdata = Map.entry(user.getId(), data);
+                    pushToQueue(userdata);
                     queuedBatches++;
                 }
             }
@@ -81,7 +86,9 @@ public class DocumentService {
         List<List<String>> data = parseMultipartFile(file, filename);
         int queuedBatches = 0;
         if (!data.isEmpty()) {
-            pushToQueue(data);
+            User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+            Map.Entry<String, List<List<String>>> userdata = Map.entry(user.getId(), data);
+            pushToQueue(userdata);
             queuedBatches = 1;
         }
 
@@ -137,27 +144,28 @@ public class DocumentService {
         return rows;
     }
 
-    private void pushToQueue(List<List<String>> data) throws IOException {
+    private void pushToQueue(Map.Entry<String, List<List<String>>> data) throws IOException {
         String json = objectMapper.writeValueAsString(data);
         redis.opsForList().leftPush(TRANSACTIONS_QUEUE, json);
     }
 
     public PagedTransactionsResponse getTransactions(
-            int limit, int offset, String search,
-            OffsetDateTime startDate, OffsetDateTime endDate
+            int pageNo, int limit, String search,
+            Instant startDate, Instant endDate
     ) {
-        int normalizedLimit = Math.min(Math.max(limit, 1), 200);
-        int normalizedOffset = Math.max(offset, 0);
         String searchParam = normalizeSearch(search);
+        int sanitizedPageNo = Math.max(pageNo, 0);
+        int sanitizedLimit = Math.min(Math.max(limit, 1), 200);
+
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
 
         Page<Document> page = documentRepository.findFiltered(
-                searchParam, startDate, endDate,
-                PageRequest.of(normalizedOffset / normalizedLimit, normalizedLimit)
+                searchParam, startDate, endDate, user,
+                PageRequest.of(sanitizedPageNo, sanitizedLimit)
         );
-        long total = documentRepository.countFiltered(searchParam, startDate, endDate);
 
-        List<TransactionDto> data = page.getContent().stream()
-                .map(d -> new TransactionDto(
+        List<TransactionDTO> data = page.getContent().stream()
+                .map(d -> new TransactionDTO(
                         d.getId(),
                         d.getAmount(),
                         d.getRecipient(),
@@ -169,7 +177,7 @@ public class DocumentService {
 
         return new PagedTransactionsResponse(
                 data,
-                new PagedTransactionsResponse.Pagination(normalizedLimit, normalizedOffset, total)
+                new PagedTransactionsResponse.Pagination(sanitizedLimit, sanitizedPageNo, page.getTotalElements())
         );
     }
 
@@ -184,16 +192,16 @@ public class DocumentService {
         return new StatsResponse(totalIncome, totalExpense, netTotal, count);
     }
 
-    public CategorySummaryResponse getCategorySummary(String search, OffsetDateTime startDate, OffsetDateTime endDate) {
+    public CategorySummaryResponse getCategorySummary(String search, Instant startDate, Instant endDate) {
         List<CategorySummaryRow> rows = documentRepository.categorySummary(
                 normalizeSearch(search), startDate, endDate
         );
 
         List<CategorySummaryResponse.Item> items = rows.stream()
                 .map(r -> new CategorySummaryResponse.Item(
-                        r.categoryName(),
-                        Objects.requireNonNullElse(r.total(), BigDecimal.ZERO),
-                        r.count() != null ? r.count() : 0L
+                        r.getCategoryName(),
+                        Objects.requireNonNullElse(r.getTotal(), BigDecimal.ZERO),
+                        r.getCount() != null ? r.getCount() : 0L
                 ))
                 .toList();
 

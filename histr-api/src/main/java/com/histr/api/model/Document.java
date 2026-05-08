@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -13,6 +15,7 @@ import java.util.UUID;
 @Table(name = "documents")
 @Getter
 @Setter
+@ToString
 @NoArgsConstructor
 public class Document {
 
@@ -20,7 +23,7 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private UUID id;
 
-    @Column(name = "recepient", length = 100)
+    @Column(name = "recepient", length = 200)
     private String recipient;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -34,10 +37,14 @@ public class Document {
     private Category category;
 
     @Column(name = "created_at")
-    private OffsetDateTime createdAt;
+    private Instant createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
 
     @PrePersist
     void prePersist() {
-        if (createdAt == null) createdAt = OffsetDateTime.now();
+        if (createdAt == null) createdAt = Instant.now();
     }
 }

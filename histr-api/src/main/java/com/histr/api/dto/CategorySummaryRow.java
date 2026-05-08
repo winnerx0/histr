@@ -2,8 +2,8 @@ package com.histr.api.dto;
 
 import java.math.BigDecimal;
 
-public record CategorySummaryRow(
-        String categoryName,
-        BigDecimal total,
-        Long count
-) {}
+public interface CategorySummaryRow {
+        String getCategoryName();
+        BigDecimal getTotal();
+        Long getCount();
+}

@@ -5,24 +5,25 @@ import com.histr.api.service.DocumentService;
 import com.histr.api.service.WorkerStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
-@CrossOrigin
 public class DocumentController {
 
     private final DocumentService documentService;
     private final WorkerStatusService workerStatusService;
 
-    @GetMapping("/parse")
+    @GetMapping(value = "/parse", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> parseDocuments() {
         try {
             Map<String, Object> result = documentService.parseLocalDocuments();
@@ -32,7 +33,7 @@ public class DocumentController {
         }
     }
 
-    @PostMapping("/documents/upload")
+    @PostMapping(value = "/documents/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> uploadDocument(@RequestParam("file") MultipartFile file) {
         try {
             Map<String, Object> result = documentService.parseUploadedFile(file);
@@ -42,18 +43,18 @@ public class DocumentController {
         }
     }
 
-    @GetMapping("/transactions")
+    @GetMapping(value = "/transactions", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<PagedTransactionsResponse> getTransactions(
+            @RequestParam(defaultValue = "0") int pageNo,
             @RequestParam(defaultValue = "25") int limit,
-            @RequestParam(defaultValue = "0") int offset,
             @RequestParam(required = false, defaultValue = "") String search,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate
     ) {
-        return ResponseEntity.ok(documentService.getTransactions(limit, offset, search, startDate, endDate));
+        return ResponseEntity.ok(documentService.getTransactions(pageNo, limit, search, startDate, endDate));
     }
 
-    @GetMapping("/transactions/stats")
+    @GetMapping(value = "/transactions/stats", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<StatsResponse> getStats(
             @RequestParam(required = false, defaultValue = "") String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
@@ -62,16 +63,16 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.getStats(search, startDate, endDate));
     }
 
-    @GetMapping("/categories/summary")
+    @GetMapping(value = "/categories/summary", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<CategorySummaryResponse> getCategorySummary(
             @RequestParam(required = false, defaultValue = "") String search,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) OffsetDateTime endDate
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant endDate
     ) {
         return ResponseEntity.ok(documentService.getCategorySummary(search, startDate, endDate));
     }
 
-    @GetMapping("/workers/status")
+    @GetMapping(value = "/workers/status", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<WorkerStatusResponse> getWorkerStatus() {
         return ResponseEntity.ok(workerStatusService.getStatus());
     }

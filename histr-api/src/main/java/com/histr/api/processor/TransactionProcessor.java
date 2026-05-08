@@ -3,12 +3,17 @@ package com.histr.api.processor;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.histr.api.model.Document;
+import com.histr.api.model.User;
 import com.histr.api.repository.CategoryRepository;
 import com.histr.api.repository.DocumentRepository;
+import com.histr.api.repository.UserRepository;
 import com.histr.api.service.ClassifierService;
 import com.histr.api.service.ClassifierService.TransactionClassificationInput;
+import com.histr.api.service.ColumnMapperService;
+import com.histr.api.service.ColumnMapperService.ColumnMapping;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,11 +29,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 @Component
@@ -37,24 +41,53 @@ public class TransactionProcessor {
 
     private static final String QUEUE = "transactions";
 
+    private static final Pattern TRANSFER_RECIPIENT = Pattern.compile(
+            "(?i)^\\s*transfer\\s+(?:from|to)\\s+(.+?)\\s*$");
+    private static final Pattern PIPE_RECIPIENT = Pattern.compile(
+            "^[^|]+\\|[^|]+\\|\\s*([^|]+?)\\s*$");
+
     private static final List<DateTimeFormatter> DATE_FORMATS = List.of(
+            // numeric, 4-digit year
             DateTimeFormatter.ofPattern("dd/MM/yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("d/M/yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.ENGLISH),
+            // numeric, 2-digit year
+            DateTimeFormatter.ofPattern("dd/MM/yy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MM-yy", Locale.ENGLISH),
+            // alpha month
+            DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MMM-yy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH),
             DateTimeFormatter.ofPattern("MMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("MMMM dd, yyyy", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale.ENGLISH),
+            // with time, 4-digit year
             DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss", Locale.ENGLISH),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH)
+            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm:ss", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm:ss", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("d MMM yyyy HH:mm:ss", Locale.ENGLISH),
+            // with time, 2-digit year
+            DateTimeFormatter.ofPattern("dd/MM/yy HH:mm:ss", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd/MM/yy HH:mm", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MM-yy HH:mm:ss", Locale.ENGLISH),
+            DateTimeFormatter.ofPattern("dd-MMM-yy HH:mm:ss", Locale.ENGLISH)
     );
 
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
     private final ClassifierService classifierService;
+    private final ColumnMapperService columnMapperService;
     private final DocumentRepository documentRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
 
     @Value("${app.worker-heartbeat-key:worker:heartbeat}")
     private String heartbeatKey;
@@ -91,7 +124,7 @@ public class TransactionProcessor {
                 String json = redis.opsForList().leftPop(QUEUE, 5, TimeUnit.SECONDS);
                 if (json == null) continue;
 
-                List<List<String>> data = objectMapper.readValue(json, new TypeReference<>() {});
+                Map.Entry<String, List<List<String>>> data = objectMapper.readValue(json, new TypeReference<>() {});
                 parseTransactions(data);
 
                 heartbeat();
@@ -101,66 +134,70 @@ public class TransactionProcessor {
         }
     }
 
-    private void parseTransactions(List<List<String>> data) {
+    private void parseTransactions(Map.Entry<String, List<List<String>>> userdata) {
+
+        User user = userRepository.findById(userdata.getKey()).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        List<List<String>> data = userdata.getValue();
 
         log.info("Parsing now");
         List<Document> documents = new ArrayList<>();
 
-        int headerRowIndex = -1;
-        for (int i = 0; i < data.size(); i++) {
+        ColumnMapping mapping = columnMapperService.detect(data);
+        log.info("Column mapping: {}", mapping);
+        if (!mapping.hasMinimumFields()) return;
+
+        int start = Math.max(0, mapping.headerRowIndex() + 1);
+        for (int i = start; i < data.size(); i++) {
             List<String> row = data.get(i);
-            log.info("data {}", row);
-            if (firstDateHeaderIndex(row) != -1) {
-                headerRowIndex = i;
-                break;
-            }
-        }
-
-        log.info("parse {}", headerRowIndex);
-        if (headerRowIndex == -1) return;
-
-        List<String> headers = data.get(headerRowIndex);
-
-        for (int i = headerRowIndex + 1; i < data.size(); i++) {
-            List<String> row = data.get(i);
-            if (row.isEmpty()) continue;
+            if (row == null || row.isEmpty()) continue;
 
             Document doc = new Document();
             doc.setAmount(BigDecimal.ZERO);
             doc.setDescription("");
-            doc.setCreatedAt(OffsetDateTime.now());
+            doc.setCreatedAt(Instant.now());
+            doc.setUser(user);
 
-            for (int k = 0; k < headers.size() && k < row.size(); k++) {
-                String key = headers.get(k);
-                String value = row.get(k);
-                if (key == null || key.isBlank()) continue;
-                String lk = key.toLowerCase();
-                String v = value != null ? value.trim() : "";
+            String dateVal = cell(row, mapping.dateCol());
+            if (!dateVal.isBlank()) {
+                Instant parsed = parseDate(dateVal);
+                if (parsed != null) doc.setCreatedAt(parsed);
+            }
 
-                if (lk.contains("date")) {
-                    OffsetDateTime parsed = parseDate(v);
-                    if (parsed != null) doc.setCreatedAt(parsed);
-                } else if (lk.contains("description")) {
-                    doc.setDescription(v);
-                } else if (lk.contains("credit") || lk.contains("money in")) {
-                    if (!v.isEmpty() && !v.equals("--")) {
-                        doc.setAmount(parseCurrency(v));
-                    }
-                } else if (lk.contains("debit") || lk.contains("money out")) {
-                    if (!v.isEmpty() && !v.equals("--")) {
-                        doc.setAmount(parseCurrency(v).negate());
-                    }
-                } else if (lk.contains("receipient") || lk.contains("payee")
-                        || lk.contains("beneficiary") || lk.contains("to / from")) {
-                    doc.setRecipient(v);
+            doc.setDescription(cell(row, mapping.descriptionCol()));
+
+            if (mapping.amountCol() >= 0) {
+                String v = cell(row, mapping.amountCol());
+                if (!v.isBlank() && !v.equals("--")) doc.setAmount(parseSignedCurrency(v));
+            } else {
+                String credit = cell(row, mapping.creditCol());
+                String debit = cell(row, mapping.debitCol());
+                if (!credit.isBlank() && !credit.equals("--")) {
+                    doc.setAmount(parseCurrency(credit));
+                } else if (!debit.isBlank() && !debit.equals("--")) {
+                    doc.setAmount(parseCurrency(debit).negate());
                 }
+            }
+
+            String recipient = cell(row, mapping.recipientCol());
+            if (!recipient.isBlank()) doc.setRecipient(recipient);
+
+            if ((doc.getRecipient() == null || doc.getRecipient().isBlank())
+                    && !doc.getDescription().isBlank()) {
+                String extracted = extractRecipient(doc.getDescription());
+                if (extracted != null) doc.setRecipient(extracted);
             }
 
             if (doc.getDescription().isBlank() && (doc.getRecipient() == null || doc.getRecipient().isBlank())) {
                 continue;
             }
+            if (doc.getAmount() == null || doc.getAmount().signum() == 0) {
+                // skip rows where no amount could be extracted
+                continue;
+            }
 
             documents.add(doc);
+            log.debug("Document {}", doc);
         }
 
         if (documents.isEmpty()) return;
@@ -186,35 +223,63 @@ public class TransactionProcessor {
         log.info("Processed {} transactions", documents.size());
     }
 
-    private OffsetDateTime parseDate(String value) {
+    private Instant parseDate(String value) {
         if (value == null || value.isBlank()) return null;
         for (DateTimeFormatter fmt : DATE_FORMATS) {
             try {
-                return LocalDate.parse(value, fmt).atStartOfDay().atOffset(ZoneOffset.UTC);
+                return LocalDate.parse(value, fmt).atStartOfDay().toInstant(ZoneOffset.UTC);
             } catch (DateTimeParseException ignored) {}
             try {
-                return LocalDateTime.parse(value, fmt).atOffset(ZoneOffset.UTC);
+                return LocalDateTime.parse(value, fmt).toInstant(ZoneOffset.UTC);
             } catch (DateTimeParseException ignored) {}
         }
         return null;
     }
 
-    private int firstDateHeaderIndex(List<String> row) {
-        if (row == null || row.isEmpty()) return -1;
+    private String cell(List<String> row, int col) {
+        if (col < 0 || col >= row.size()) return "";
+        String v = row.get(col);
+        return v == null ? "" : v.trim();
+    }
 
-        for (int i = 0; i < row.size(); i++) {
-            String cell = row.get(i);
-            if (cell != null && cell.toLowerCase().contains("date")) {
-                return i;
-            }
-        }
+    private String extractRecipient(String description) {
+        if (description == null) return null;
+        String d = description.trim();
+        if (d.isEmpty()) return null;
 
-        return -1;
+        Matcher m = TRANSFER_RECIPIENT.matcher(d);
+        if (m.matches()) return m.group(1).trim();
+
+        // "Airtime | 8168774440 | MTN" / "Betting | 09021453973 | SPORTYBET"
+        Matcher p = PIPE_RECIPIENT.matcher(d);
+        if (p.matches()) return p.group(1).trim();
+
+        return null;
     }
 
     private BigDecimal parseCurrency(String value) {
         try {
             return new BigDecimal(value.replace("₦", "").replace(",", "").trim());
+        } catch (NumberFormatException e) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private BigDecimal parseSignedCurrency(String value) {
+        String v = value.replace("₦", "").replace(",", "").trim();
+        boolean negative = false;
+        if (v.startsWith("(") && v.endsWith(")")) {
+            negative = true;
+            v = v.substring(1, v.length() - 1);
+        } else if (v.endsWith("Dr") || v.endsWith("DR")) {
+            negative = true;
+            v = v.substring(0, v.length() - 2).trim();
+        } else if (v.endsWith("Cr") || v.endsWith("CR")) {
+            v = v.substring(0, v.length() - 2).trim();
+        }
+        try {
+            BigDecimal n = new BigDecimal(v);
+            return negative ? n.negate() : n;
         } catch (NumberFormatException e) {
             return BigDecimal.ZERO;
         }

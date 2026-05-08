@@ -29,6 +29,10 @@ spring:
         options:
           model: text-embedding-3-small
           dimensions: ${OPENAI_EMBEDDING_DIMENSIONS:384}
+      chat:
+        options:
+          model: ${OPENAI_CHAT_MODEL:gpt-5-nano}
+          temperature: 0.0
 
   servlet:
     multipart:
@@ -40,3 +44,7 @@ app:
   max-upload-size-mb: ${MAX_UPLOAD_SIZE_MB:15}
   worker-heartbeat-key: ${WORKER_HEARTBEAT_KEY:worker:heartbeat}
   worker-processed-count-key: ${WORKER_PROCESSED_COUNT_KEY:worker:processed_count}
+
+jwt:
+  access-token-secret: A+g636AmqIXHB5zbJc2o6JVQY2DczQ6Z
+  refresh-token-secret: a4EfiRYbVSrFe4ckAdeo/ZkuJOgWb6qR
