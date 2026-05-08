@@ -29,3 +29,5 @@ cluster/venv/
 .DS_Store
 
 documents/
+.claude/
+.idea/
