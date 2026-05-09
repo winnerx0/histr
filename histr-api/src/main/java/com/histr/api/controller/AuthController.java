@@ -9,10 +9,9 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -35,4 +34,10 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
         return ResponseEntity.ok(authService.refresh(request));
     }
+
+    @GetMapping(value = "/success", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<AuthResponse> oauthSuccess(@AuthenticationPrincipal OidcUser user){
+        return ResponseEntity.ok(authService.oauthSuccess(user));
+    }
+
 }

@@ -1,5 +1,6 @@
 package com.histr.api.model;
 
+import com.histr.api.enums.Provider;
 import com.histr.api.enums.Role;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -36,6 +37,12 @@ public class User implements UserDetails {
 
     @Column(columnDefinition = "timestamp with time zone")
     private Instant joinedAt;
+
+    @Column(nullable = true)
+    private Provider provider = Provider.MANUAL;
+
+    @Column(nullable = true)
+    private String picture;
 
     @ToString.Exclude
     @OneToMany(cascade = CascadeType.ALL)

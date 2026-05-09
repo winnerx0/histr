@@ -45,6 +45,9 @@ services:
       REDIS_URL: redis://redis:6379
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS:-384}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL}
       UPLOAD_DIR: /app/uploads
     volumes:
       - uploads_data:/app/uploads

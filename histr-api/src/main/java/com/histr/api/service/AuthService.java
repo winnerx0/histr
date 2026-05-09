@@ -18,6 +18,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -135,6 +136,22 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public AuthResponse oauthSuccess(OidcUser oidcUser){
+        User user = userRepository.findByEmail(oidcUser.getEmail()).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        String accessToken = jwtUtils.generateToken(user, "access");
+
+        String refreshToken = jwtUtils.generateToken(user, "refresh");
+
+        try {
+            persistRefreshToken(user, refreshToken);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+
+        return new AuthResponse(accessToken, refreshToken);
     }
 
     private void persistRefreshToken(User user, String refreshToken) throws NoSuchAlgorithmException {
