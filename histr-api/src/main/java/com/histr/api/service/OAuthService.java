@@ -5,6 +5,7 @@ import com.histr.api.enums.Role;
 import com.histr.api.model.User;
 import com.histr.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+@Slf4j
 @Configuration
 @RequiredArgsConstructor
 public class OAuthService {
@@ -41,9 +43,8 @@ public class OAuthService {
                     .getClientRegistration()
                     .getRegistrationId().toUpperCase();
 
-            String providerId = oidcUser.getSubject(); // Google "sub"
             String email = oidcUser.getEmail();
-            String name = oidcUser.getPreferredUsername();
+            String name = oidcUser.getName();
             String picture = oidcUser.getPicture();
 
             if (email == null) {

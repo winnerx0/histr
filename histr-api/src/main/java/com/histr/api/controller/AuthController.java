@@ -7,11 +7,15 @@ import com.histr.api.dto.RegisterUserRequest;
 import com.histr.api.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.*;
+
+import java.net.URI;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -19,6 +23,9 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @PostMapping(value = "/register", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterUserRequest registerUserRequest){
@@ -34,10 +41,4 @@ public class AuthController {
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request){
         return ResponseEntity.ok(authService.refresh(request));
     }
-
-    @GetMapping(value = "/success", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<AuthResponse> oauthSuccess(@AuthenticationPrincipal OidcUser user){
-        return ResponseEntity.ok(authService.oauthSuccess(user));
-    }
-
 }

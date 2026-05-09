@@ -1,5 +1,7 @@
 package com.histr.api.utils;
 
+import com.histr.api.model.User;
+import com.histr.api.service.CustomUserDetailsService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -30,7 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtils jwtUtils;
 
-    private final UserDetailsService userDetailsService;
+    private final CustomUserDetailsService userDetailsService;
 
     private final HandlerExceptionResolver handlerExceptionResolver;
 
@@ -51,23 +53,19 @@ public class JwtFilter extends OncePerRequestFilter {
 
        try {
 
-           log.info("incoming {} {} content-type={} length={}",
-                   request.getMethod(), request.getRequestURI(),
-                   request.getContentType(), request.getContentLengthLong());
-
            String token = authHeader.substring(7);
 
-           String username = jwtUtils.extractUsername(token);
+           String userId = jwtUtils.extractSubject(token, JwtUtils.TokenType.ACCESS);
 
            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-           if (username != null && authentication == null) {
+           if (userId != null && authentication == null) {
 
-               UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+               User user = (User) userDetailsService.loadUserById(userId);
 
-               if (jwtUtils.isTokenValid(token, userDetails)) {
+               if (jwtUtils.isTokenValid(token, user)) {
 
-                   UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+                   UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 
                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                    SecurityContextHolder.getContext().setAuthentication(authToken);

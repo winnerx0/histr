@@ -48,6 +48,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       OAUTH_REDIRECT_URL: ${OAUTH_REDIRECT_URL}
+      FRONTEND_URL: ${FRONTEND_URL}
       UPLOAD_DIR: /app/uploads
     volumes:
       - uploads_data:/app/uploads

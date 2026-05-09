@@ -53,3 +53,4 @@ app:
   max-upload-size-mb: ${MAX_UPLOAD_SIZE_MB:15}
   worker-heartbeat-key: ${WORKER_HEARTBEAT_KEY:worker:heartbeat}
   worker-processed-count-key: ${WORKER_PROCESSED_COUNT_KEY:worker:processed_count}
+  frontend-url: ${FRONTEND_URL}

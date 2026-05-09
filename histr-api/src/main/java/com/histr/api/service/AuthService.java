@@ -116,7 +116,7 @@ public class AuthService {
             // Verify signature against the refresh secret + that the subject still matches.
             String subject;
             try {
-                subject = jwtUtils.extractUsername(presented, TokenType.REFRESH);
+                subject = jwtUtils.extractSubject(presented, TokenType.REFRESH);
             } catch (Exception e) {
                 throw new BadCredentialsException("Invalid refresh token");
             }
@@ -136,22 +136,6 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public AuthResponse oauthSuccess(OidcUser oidcUser){
-        User user = userRepository.findByEmail(oidcUser.getEmail()).orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        String accessToken = jwtUtils.generateToken(user, "access");
-
-        String refreshToken = jwtUtils.generateToken(user, "refresh");
-
-        try {
-            persistRefreshToken(user, refreshToken);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
-
-        return new AuthResponse(accessToken, refreshToken);
     }
 
     private void persistRefreshToken(User user, String refreshToken) throws NoSuchAlgorithmException {

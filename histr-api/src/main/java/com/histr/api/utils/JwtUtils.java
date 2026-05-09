@@ -59,24 +59,20 @@ public class JwtUtils {
                 .compact();
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        return isTokenValid(token, userDetails, TokenType.ACCESS);
+    public boolean isTokenValid(String token, User user) {
+        return isTokenValid(token, user, TokenType.ACCESS);
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails, TokenType type) {
+    public boolean isTokenValid(String token, User user, TokenType type) {
         try {
-            return extractUsername(token, type).equals(userDetails.getUsername())
+            return extractSubject(token, type).equals(user.getId())
                     && !isTokenExpired(token, type);
         } catch (Exception e) {
             return false;
         }
     }
 
-    public String extractUsername(String token) {
-        return extractUsername(token, TokenType.ACCESS);
-    }
-
-    public String extractUsername(String token, TokenType type) {
+    public String extractSubject(String token, TokenType type) {
         return extractClaim(token, type, Claims::getSubject);
     }
 

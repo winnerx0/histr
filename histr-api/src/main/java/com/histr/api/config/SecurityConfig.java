@@ -16,6 +16,7 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @EnableWebSecurity
@@ -28,7 +29,7 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, AccessDeniedHandler accessDeniedHandler, AuthenticationEntryPoint authenticationEntryPoint, OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, AccessDeniedHandler accessDeniedHandler, AuthenticationEntryPoint authenticationEntryPoint, OAuth2UserService<OidcUserRequest, OidcUser> oidcUserService, AuthenticationSuccessHandler authenticationSuccessHandler) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
@@ -41,7 +42,7 @@ public class SecurityConfig {
                 })
                 .oauth2Login(oauth -> {
                     oauth.authorizationEndpoint(authEndpoint -> authEndpoint.baseUri("/oauth/login"));
-                    oauth.defaultSuccessUrl("/api/v1/auth/success", true);
+                    oauth.successHandler(authenticationSuccessHandler);
                     oauth.redirectionEndpoint(redirection -> redirection.baseUri("/oauth/callback/*"));
                     oauth.userInfoEndpoint(userInfo -> {
                         userInfo.oidcUserService(oidcUserService);
