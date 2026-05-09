@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { FcGoogle } from "react-icons/fc";
+import { googleOAuthUrl } from "./api";
 import { useAuth } from "./auth";
 
 type Props = {
@@ -47,6 +49,15 @@ export function Register({ onSwitch, onBack }: Props) {
         </div>
 
         {error && <p className="auth-error">{error}</p>}
+
+        <a className="oauth-btn" href={googleOAuthUrl}>
+          <FcGoogle aria-hidden="true" />
+          <span>Continue with Google</span>
+        </a>
+
+        <div className="auth-divider">
+          <span>or</span>
+        </div>
 
         <div className="field">
           <label htmlFor="register-username">Username</label>

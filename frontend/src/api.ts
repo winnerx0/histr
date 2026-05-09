@@ -47,6 +47,9 @@ export type LoginPayload = {
 
 const apiBase =
   import.meta.env.VITE_API_BASE_URL ?? "http://localhost:80/api/v1";
+const apiOrigin = apiBase.replace(/\/api\/v1\/?$/, "");
+export const googleOAuthUrl =
+  import.meta.env.VITE_GOOGLE_OAUTH_URL ?? `${apiOrigin}/oauth/login/google`;
 
 const ACCESS_KEY = "histr.accessToken";
 const REFRESH_KEY = "histr.refreshToken";

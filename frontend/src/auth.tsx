@@ -28,6 +28,10 @@ type AuthContextValue = {
   bootstrapping: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
+  completeOAuthLogin: (tokens: {
+    accessToken: string;
+    refreshToken: string;
+  }) => void;
   logout: () => void;
 };
 
@@ -41,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   );
   // While we proactively refresh on startup, hold the UI to avoid a 401 flash.
   const [bootstrapping, setBootstrapping] = useState<boolean>(
-    () => !!getRefreshToken(),
+    () => window.location.pathname !== "/callback" && !!getRefreshToken(),
   );
 
   // Persist username when it changes.
@@ -70,6 +74,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      if (window.location.pathname === "/callback") {
+        if (cancelled) return;
+        setBootstrapping(false);
+        return;
+      }
+
       const access = getAccessToken();
       const refresh = getRefreshToken();
 
@@ -130,6 +140,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setRefreshToken(result.refreshToken);
         setToken(result.accessToken);
         setUsername(payload.username);
+      },
+      completeOAuthLogin: ({ accessToken, refreshToken }) => {
+        setAccessToken(accessToken);
+        setRefreshToken(refreshToken);
+        setToken(accessToken);
+        setUsername(null);
       },
       logout: () => {
         clearTokens();

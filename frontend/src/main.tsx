@@ -9,6 +9,7 @@ import {
   useNavigate,
 } from "react-router-dom";
 import { App } from "./App";
+import { AuthCallback } from "./AuthCallback";
 import { AuthProvider, useAuth } from "./auth";
 import { Landing } from "./Landing";
 import { Login } from "./Login";
@@ -91,6 +92,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 </PublicOnlyRoute>
               }
             />
+            <Route path="/callback" element={<AuthCallback />} />
             <Route
               path="/dashboard"
               element={
