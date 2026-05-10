@@ -42,8 +42,8 @@ public class JwtUtils {
 
     private String buildAccessToken(User user) {
         return Jwts.builder()
-                .subject(user.getUsername())
-                .claims(Map.of("role", user.getRole()))
+                .subject(user.getId())
+                .claims(Map.of("role", user.getRole(), "token_type", "access"))
                 .issuedAt(new Date())
                 .expiration(Date.from(Instant.now().plus(Duration.ofMinutes(15))))
                 .signWith(signingKey(TokenType.ACCESS), Jwts.SIG.HS256)
@@ -52,7 +52,8 @@ public class JwtUtils {
 
     private String buildRefreshToken(User user) {
         return Jwts.builder()
-                .subject(user.getUsername())
+                .subject(user.getId())
+                .claims(Map.of("token_type", "refresh"))
                 .issuedAt(new Date())
                 .expiration(Date.from(Instant.now().plus(Duration.ofDays(30))))
                 .signWith(signingKey(TokenType.REFRESH), Jwts.SIG.HS256)
