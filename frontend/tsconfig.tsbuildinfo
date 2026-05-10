@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/Landing.tsx","./src/Login.tsx","./src/Register.tsx","./src/api.ts","./src/auth.tsx","./src/main.tsx"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/AuthCallback.tsx","./src/Landing.tsx","./src/Login.tsx","./src/Register.tsx","./src/api.ts","./src/auth.tsx","./src/main.tsx"],"version":"5.9.3"}
