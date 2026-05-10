@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -166,7 +167,7 @@ class DocumentServiceTest {
 
     @Test
     void getStatsDefaultsNullAggregateValues() {
-        when(documentRepository.computeStats("", null, null))
+        when(documentRepository.computeStats(eq(""), isNull(), isNull(), any(User.class)))
                 .thenReturn(new StatsRow(null, null, null, null));
 
         StatsResponse response = documentService.getStats("   ", null, null);

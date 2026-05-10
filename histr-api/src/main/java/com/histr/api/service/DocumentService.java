@@ -182,7 +182,10 @@ public class DocumentService {
     }
 
     public StatsResponse getStats(String search, OffsetDateTime startDate, OffsetDateTime endDate) {
-        StatsRow row = documentRepository.computeStats(normalizeSearch(search), startDate, endDate);
+
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        StatsRow row = documentRepository.computeStats(normalizeSearch(search), startDate, endDate, user);
 
         BigDecimal totalIncome = Objects.requireNonNullElse(row.totalIncome(), BigDecimal.ZERO);
         BigDecimal totalExpense = Objects.requireNonNullElse(row.totalExpense(), BigDecimal.ZERO).abs();
@@ -193,8 +196,11 @@ public class DocumentService {
     }
 
     public CategorySummaryResponse getCategorySummary(String search, Instant startDate, Instant endDate) {
+
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
         List<CategorySummaryRow> rows = documentRepository.categorySummary(
-                normalizeSearch(search), startDate, endDate
+                normalizeSearch(search), startDate, endDate, user.getId()
         );
 
         List<CategorySummaryResponse.Item> items = rows.stream()

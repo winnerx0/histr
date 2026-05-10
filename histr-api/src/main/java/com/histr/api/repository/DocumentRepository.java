@@ -73,11 +73,13 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
                                    OR LOWER(d.recipient) LIKE LOWER(CONCAT('%', :search, '%')))
             AND (CAST(:startDate AS TIMESTAMP) IS NULL OR d.createdAt >= :startDate)
             AND (CAST(:endDate AS TIMESTAMP) IS NULL OR d.createdAt <= :endDate)
+            AND d.user = :user
             """)
     StatsRow computeStats(
             @Param("search") String search,
             @Param("startDate") OffsetDateTime startDate,
-            @Param("endDate") OffsetDateTime endDate
+            @Param("endDate") OffsetDateTime endDate,
+            @Param("user") User user
     );
 
     @Query(value = """
@@ -87,12 +89,14 @@ public interface DocumentRepository extends JpaRepository<Document, UUID> {
                                    OR LOWER(d.recepient) LIKE LOWER(CONCAT('%', :search, '%')))
               AND (CAST(:startDate AS TIMESTAMPTZ) IS NULL OR d.created_at >= :startDate)
               AND (CAST(:endDate AS TIMESTAMPTZ) IS NULL OR d.created_at <= :endDate)
+            AND d.user_id = :userId
             GROUP BY c.id, c.name
             ORDER BY SUM(d.amount) DESC
             """, nativeQuery = true)
     List<CategorySummaryRow> categorySummary(
             @Param("search") String search,
             @Param("startDate") Instant startDate,
-            @Param("endDate") Instant endDate
+            @Param("endDate") Instant endDate,
+            @Param("userId") String userId
     );
 }
