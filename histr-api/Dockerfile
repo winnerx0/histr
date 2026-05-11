@@ -9,6 +9,6 @@ RUN mvn package -DskipTests -q
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
-ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx512m -Xmx256m"
+ENV JAVA_TOOL_OPTIONS="-Xms128m -Xmx256m"
 EXPOSE 5000
 ENTRYPOINT ["java", "-jar", "app.jar"]
