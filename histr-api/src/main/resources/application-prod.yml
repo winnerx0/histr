@@ -22,7 +22,7 @@ spring:
               - openid
               - profile
               - email
-            redirect-uri: ${OAUTH_REDIRECT_URL}
+            redirect-uri: "${OAUTH_REDIRECT_URL}/{registrationId}"
 
   jpa:
     hibernate:
@@ -54,3 +54,6 @@ app:
   worker-heartbeat-key: ${WORKER_HEARTBEAT_KEY:worker:heartbeat}
   worker-processed-count-key: ${WORKER_PROCESSED_COUNT_KEY:worker:processed_count}
   frontend-url: ${FRONTEND_URL}
+jwt:
+  access-token-secret: A+g636AmqIXHB5zbJc2o6JVQY2DczQ6Z
+  refresh-token-secret: a4EfiRYbVSrFe4ckAdeo/ZkuJOgWb6qR
