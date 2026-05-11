@@ -70,6 +70,8 @@ public class CustomOAuthSuccessHandler implements AuthenticationSuccessHandler {
             String url = UriComponentsBuilder.fromUri(URI.create(frontendUrl + "/callback"))
                     .queryParam("accessToken", accessToken)
                     .queryParam("refreshToken", refreshToken)
+                    .queryParam("username", user.getUsername())
+                    .queryParam("picture", user.getPicture())
                     .toUriString();
             response.sendRedirect(url);
         } catch (NoSuchAlgorithmException e) {

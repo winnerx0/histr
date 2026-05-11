@@ -43,6 +43,24 @@ const PIE_COLORS = [
   "#b91c1c",
 ];
 
+const buttonBase =
+  "rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors disabled:cursor-default disabled:opacity-50";
+const primaryButton = `${buttonBase} border-gray-900 bg-gray-900 text-white enabled:hover:border-gray-800 enabled:hover:bg-gray-800`;
+const secondaryButton = `${buttonBase} border-gray-200 bg-white text-gray-900 enabled:hover:border-gray-300`;
+const inputClass =
+  "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-4 focus:ring-gray-900/10";
+const panelClass = "rounded-lg border border-gray-200 bg-white p-4";
+const panelHeadingClass = "mb-3.5 flex items-center justify-between";
+const panelTitleClass = "text-sm font-semibold";
+const panelKickerClass = "text-xs text-gray-500";
+const kpiCardClass =
+  "grid gap-2 rounded-lg border border-gray-200 bg-white p-4";
+const kpiLabelClass =
+  "text-xs font-medium uppercase tracking-[0.06em] text-gray-500";
+const tableHeadCellClass =
+  "sticky top-0 border-b border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-xs font-medium uppercase tracking-[0.06em] text-gray-500";
+const tableCellClass = "border-b border-gray-200 px-3 py-2.5 text-sm";
+
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("en-NG", {
     style: "currency",
@@ -52,7 +70,7 @@ const formatCurrency = (amount: number) =>
 
 export function App() {
   const queryClient = useQueryClient();
-  const { username, logout } = useAuth();
+  const { username, profilePicture, logout } = useAuth();
   const [pageNo, setPageNo] = useState(0);
   const [search, setSearch] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -118,9 +136,7 @@ export function App() {
       invalidateData();
     },
     onError: (error) => {
-      setUploadMessage(
-        error instanceof Error ? error.message : "Parse failed",
-      );
+      setUploadMessage(error instanceof Error ? error.message : "Parse failed");
     },
   });
 
@@ -130,6 +146,8 @@ export function App() {
   }, [transactionsQuery.data?.pagination.total]);
 
   const currentPage = pageNo + 1;
+  const displayName = username ?? "Account";
+  const userInitial = displayName.trim().charAt(0).toUpperCase() || "A";
 
   const topCategories = useMemo(() => {
     return summaryQuery.data?.data ?? [];
@@ -161,7 +179,7 @@ export function App() {
   }, [topCategories]);
 
   const pieBackground = useMemo(() => {
-    if (pieSegments.length === 0) return "conic-gradient(var(--border) 0 100%)";
+    if (pieSegments.length === 0) return "conic-gradient(#e5e7eb 0 100%)";
     const stops = pieSegments
       .map((s) => `${s.color} ${s.start}% ${s.end}%`)
       .join(", ");
@@ -176,58 +194,103 @@ export function App() {
   }, [statusQuery.data?.workerHeartbeat]);
 
   return (
-    <div className="app-frame">
-      <div className="page-shell">
-        <main className="dashboard">
-          <header className="dashboard-header">
-            <div className="brand-block">
-              <span className="brand-mark">H</span>
+    <div className="min-h-screen">
+      <div className="mx-auto w-full max-w-[1200px] p-6 max-sm:p-4">
+        <main className="grid gap-6">
+          <header className="flex flex-col gap-4 border-b border-gray-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-lg bg-gray-900 font-bold text-white">
+                H
+              </span>
               <div>
-                <p className="eyebrow">Financial Dashboard</p>
-                <h1>Histr</h1>
+                <p className="text-xs uppercase tracking-[0.08em] text-gray-500">
+                  Financial Dashboard
+                </p>
+                <h1 className="text-[1.4rem] font-bold">Histr</h1>
               </div>
             </div>
-            <div className="header-meta">
+            <div className="flex flex-wrap items-center gap-3">
               <span
-                className={`live-pill ${workerIsLive ? "is-live" : "is-idle"}`}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                  workerIsLive
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : "border-gray-200 text-gray-500"
+                }`}
               >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    workerIsLive ? "bg-emerald-700" : "bg-gray-500"
+                  }`}
+                  aria-hidden="true"
+                />
                 {workerIsLive ? "Worker online" : "Worker idle"}
               </span>
-              {username && <span className="user-pill">{username}</span>}
-              <button className="secondary-btn" onClick={logout}>
+              <span className="inline-flex min-w-0 items-center gap-2 text-sm text-gray-500">
+                {profilePicture ? (
+                  <img
+                    className="h-7 w-7 shrink-0 rounded-full border border-gray-200 object-cover"
+                    src={profilePicture}
+                    alt=""
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <span
+                    className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-gray-200 bg-gray-100 text-xs font-bold text-gray-900"
+                    aria-hidden="true"
+                  >
+                    {userInitial}
+                  </span>
+                )}
+                <span className="max-w-56 truncate max-sm:max-w-40">
+                  {displayName}
+                </span>
+              </span>
+              <button className={secondaryButton} onClick={logout}>
                 Sign out
               </button>
             </div>
           </header>
 
-          <section className="kpi-grid">
-            <article className="kpi-card income-card">
-              <h3>Total Income</h3>
-              <p>{formatCurrency(statsQuery.data?.totalIncome ?? 0)}</p>
+          <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <article className={kpiCardClass}>
+              <h3 className={kpiLabelClass}>Total Income</h3>
+              <p className="text-xl font-bold text-emerald-700">
+                {formatCurrency(statsQuery.data?.totalIncome ?? 0)}
+              </p>
             </article>
-            <article className="kpi-card expense-card">
-              <h3>Total Expense</h3>
-              <p>{formatCurrency(statsQuery.data?.totalExpense ?? 0)}</p>
+            <article className={kpiCardClass}>
+              <h3 className={kpiLabelClass}>Total Expense</h3>
+              <p className="text-xl font-bold text-red-700">
+                {formatCurrency(statsQuery.data?.totalExpense ?? 0)}
+              </p>
             </article>
-            <article className="kpi-card net-card">
-              <h3>Net Balance</h3>
-              <p>{formatCurrency(statsQuery.data?.netTotal ?? 0)}</p>
+            <article className={kpiCardClass}>
+              <h3 className={kpiLabelClass}>Net Balance</h3>
+              <p className="text-xl font-bold">
+                {formatCurrency(statsQuery.data?.netTotal ?? 0)}
+              </p>
             </article>
-            <article className="kpi-card count-card">
-              <h3>Transactions</h3>
-              <p>{statsQuery.data?.transactionCount ?? 0}</p>
+            <article className={kpiCardClass}>
+              <h3 className={kpiLabelClass}>Transactions</h3>
+              <p className="text-xl font-bold">
+                {statsQuery.data?.transactionCount ?? 0}
+              </p>
             </article>
           </section>
 
-          <section className="dashboard-workspace">
-            <aside className="insight-rail">
-              <section className="panel upload-panel">
-                <div className="panel-heading">
-                  <h2 className="panel-title">Upload</h2>
-                  <span className="panel-kicker">.xlsx / .csv</span>
+          <section className="grid gap-4 lg:grid-cols-[minmax(280px,320px)_minmax(0,1fr)]">
+            <aside className="grid content-start gap-4">
+              <section className={`${panelClass} grid gap-3`}>
+                <div className={panelHeadingClass}>
+                  <h2 className={panelTitleClass}>Upload</h2>
+                  <span className={panelKickerClass}>.xlsx / .csv</span>
                 </div>
                 <label
-                  className={`file-picker ${isDragOver ? "drag-over" : ""}`}
+                  className={`grid min-h-24 cursor-pointer place-items-center rounded-lg border border-dashed p-4 text-center text-sm transition-colors ${
+                    isDragOver
+                      ? "border-gray-900 bg-neutral-100 text-gray-900"
+                      : "border-gray-300 text-gray-500 hover:border-gray-900 hover:bg-neutral-100 hover:text-gray-900"
+                  }`}
                   htmlFor="file-input"
                   onDragOver={(e) => {
                     e.preventDefault();
@@ -246,6 +309,7 @@ export function App() {
                 </label>
                 <input
                   id="file-input"
+                  className="hidden"
                   type="file"
                   accept=".xlsx,.csv"
                   onChange={(event) => {
@@ -255,7 +319,7 @@ export function App() {
                   }}
                 />
                 <button
-                  className="primary-btn"
+                  className={primaryButton}
                   disabled={!selectedFile || uploadMutation.isPending}
                   onClick={() => {
                     if (selectedFile) uploadMutation.mutate(selectedFile);
@@ -264,7 +328,7 @@ export function App() {
                   {uploadMutation.isPending ? "Uploading…" : "Upload"}
                 </button>
                 <button
-                  className="secondary-btn"
+                  className={secondaryButton}
                   disabled={parseMutation.isPending}
                   onClick={() => {
                     setUploadMessage("");
@@ -276,46 +340,54 @@ export function App() {
                     : "Parse local documents"}
                 </button>
                 {uploadMessage ? (
-                  <p className="upload-message">{uploadMessage}</p>
+                  <p className="text-sm text-emerald-700">{uploadMessage}</p>
                 ) : null}
               </section>
 
-              <section className="panel status-panel">
-                <div className="panel-heading">
-                  <h2 className="panel-title">Processing</h2>
-                  <span className="panel-kicker">
+              <section className={panelClass}>
+                <div className={panelHeadingClass}>
+                  <h2 className={panelTitleClass}>Processing</h2>
+                  <span className={panelKickerClass}>
                     {workerIsLive ? "Live" : "Idle"}
                   </span>
                 </div>
-                <dl className="status-grid">
-                  <div className="status-row">
-                    <dt>Queue depth</dt>
-                    <dd>{statusQuery.data?.queueDepth ?? 0}</dd>
+                <dl className="grid gap-2">
+                  <div className="flex justify-between gap-2 text-sm">
+                    <dt className="text-gray-500">Queue depth</dt>
+                    <dd className="font-medium">
+                      {statusQuery.data?.queueDepth ?? 0}
+                    </dd>
                   </div>
-                  <div className="status-row">
-                    <dt>Processed</dt>
-                    <dd>{statusQuery.data?.processedCount ?? 0}</dd>
+                  <div className="flex justify-between gap-2 text-sm">
+                    <dt className="text-gray-500">Processed</dt>
+                    <dd className="font-medium">
+                      {statusQuery.data?.processedCount ?? 0}
+                    </dd>
                   </div>
-                  <div className="status-row">
-                    <dt>Heartbeat</dt>
-                    <dd>{statusQuery.data?.workerHeartbeat ?? "—"}</dd>
+                  <div className="flex justify-between gap-2 text-sm">
+                    <dt className="text-gray-500">Heartbeat</dt>
+                    <dd className="font-medium">
+                      {statusQuery.data?.workerHeartbeat ?? "—"}
+                    </dd>
                   </div>
                 </dl>
               </section>
 
-              <section className="panel category-panel">
-                <div className="panel-heading">
-                  <h2 className="panel-title">Top Categories</h2>
-                  <span className="panel-kicker">{pieSegments.length}</span>
+              <section className={panelClass}>
+                <div className={panelHeadingClass}>
+                  <h2 className={panelTitleClass}>Top Categories</h2>
+                  <span className={panelKickerClass}>{pieSegments.length}</span>
                 </div>
-                <div className="category-chart">
+                <div className="grid justify-items-center gap-4">
                   <div
-                    className="pie-chart"
+                    className="relative aspect-square w-[min(160px,100%)] rounded-full"
                     style={{ background: pieBackground }}
                   >
-                    <div className="pie-center">
-                      <span>Total</span>
-                      <strong>
+                    <div className="absolute inset-[26%] grid place-content-center rounded-full bg-white text-center">
+                      <span className="text-[0.65rem] uppercase tracking-[0.06em] text-gray-500">
+                        Total
+                      </span>
+                      <strong className="text-xs">
                         {formatCurrency(
                           pieSegments.reduce((sum, s) => sum + s.value, 0),
                         )}
@@ -323,15 +395,18 @@ export function App() {
                     </div>
                   </div>
 
-                  <div className="pie-legend">
+                  <div className="grid max-h-[200px] w-full gap-1.5 overflow-auto">
                     {pieSegments.map((segment) => (
-                      <div key={segment.category} className="legend-item">
+                      <div
+                        key={segment.category}
+                        className="grid grid-cols-[9px_1fr_auto] items-center gap-2 text-sm"
+                      >
                         <span
-                          className="legend-dot"
+                          className="h-[9px] w-[9px] rounded-full"
                           style={{ backgroundColor: segment.color }}
                         />
-                        <span className="legend-label">{segment.category}</span>
-                        <span className="legend-value">
+                        <span className="truncate">{segment.category}</span>
+                        <span className="text-xs text-gray-500">
                           {Math.round(segment.percentage)}%
                         </span>
                       </div>
@@ -341,16 +416,17 @@ export function App() {
               </section>
             </aside>
 
-            <section className="panel transactions-panel">
-              <div className="table-header">
+            <section className={panelClass}>
+              <div className="mb-3.5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 className="panel-title">Transactions</h2>
-                  <p className="table-subtitle">
+                  <h2 className={panelTitleClass}>Transactions</h2>
+                  <p className="mt-1 text-sm text-gray-500">
                     {transactionsQuery.data?.pagination.total ?? 0} records
                   </p>
                 </div>
-                <div className="filters">
+                <div className="flex gap-2 max-sm:w-full">
                   <input
+                    className={`${inputClass} sm:w-[220px]`}
                     placeholder="Search description or recipient"
                     value={search}
                     onChange={(event) => {
@@ -361,29 +437,42 @@ export function App() {
                 </div>
               </div>
 
-              <div className="table-wrapper">
-                <table>
+              <div className="overflow-auto rounded-lg border border-gray-200">
+                <table className="w-full min-w-[720px] border-collapse">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Description</th>
-                      <th>Recipient</th>
-                      <th>Category</th>
-                      <th>Amount</th>
+                      <th className={tableHeadCellClass}>Date</th>
+                      <th className={tableHeadCellClass}>Description</th>
+                      <th className={tableHeadCellClass}>Recipient</th>
+                      <th className={tableHeadCellClass}>Category</th>
+                      <th className={tableHeadCellClass}>Amount</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(transactionsQuery.data?.data ?? []).map((item) => (
-                      <tr key={item.id}>
-                        <td>{new Date(item.createdAt).toLocaleDateString()}</td>
-                        <td>{item.description}</td>
-                        <td>{item.recipient ?? "—"}</td>
-                        <td>
-                          <span className="category-tag">{item.category}</span>
+                      <tr
+                        key={item.id}
+                        className="last:[&>td]:border-b-0 hover:bg-neutral-50"
+                      >
+                        <td className={tableCellClass}>
+                          {new Date(item.createdAt).toLocaleDateString()}
                         </td>
-                        <td>
+                        <td className={tableCellClass}>{item.description}</td>
+                        <td className={tableCellClass}>
+                          {item.recipient ?? "—"}
+                        </td>
+                        <td className={tableCellClass}>
+                          <span className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+                            {item.category}
+                          </span>
+                        </td>
+                        <td className={tableCellClass}>
                           <span
-                            className={`amount-pill ${item.amount < 0 ? "negative" : "positive"}`}
+                            className={`font-semibold tabular-nums ${
+                              item.amount < 0
+                                ? "text-red-700"
+                                : "text-emerald-700"
+                            }`}
                           >
                             {formatCurrency(item.amount)}
                           </span>
@@ -394,9 +483,9 @@ export function App() {
                 </table>
               </div>
 
-              <div className="pagination">
+              <div className="mt-3.5 flex items-center justify-between gap-4 text-sm text-gray-500">
                 <button
-                  className="secondary-btn"
+                  className={secondaryButton}
                   disabled={currentPage <= 1}
                   onClick={() =>
                     setPageNo((previous) => Math.max(previous - 1, 0))
@@ -408,7 +497,7 @@ export function App() {
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
-                  className="secondary-btn"
+                  className={secondaryButton}
                   disabled={currentPage >= totalPages}
                   onClick={() => setPageNo((previous) => previous + 1)}
                 >

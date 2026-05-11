@@ -1,95 +1,47 @@
-import { useState, type FormEvent } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { googleOAuthUrl } from "./api";
-import { useAuth } from "./auth";
 
 type Props = {
   onSwitch: () => void;
   onBack: () => void;
 };
 
+const authPageClass = "relative grid min-h-screen place-items-center px-4 py-8";
+const authCardClass =
+  "grid w-full max-w-[380px] gap-4 p-8";
+const oauthButtonClass =
+  "inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-gray-200 bg-white px-3.5 py-2 text-sm font-semibold text-gray-900 no-underline transition-colors hover:border-gray-300 hover:bg-gray-50";
+
 export function Login({ onSwitch, onBack }: Props) {
-  const { login } = useAuth();
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const handleSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await login({ username, password });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
-    <div className="auth-page">
-      <button type="button" className="auth-back" onClick={onBack}>
-        ← Back to home
-      </button>
+    <div className={authPageClass}>
 
-      <form className="auth-card" onSubmit={handleSubmit}>
-        <div className="auth-brand">
-          <span className="brand-mark">H</span>
-          <span className="brand-name">Histr</span>
+      <div className={authCardClass}>
+        <div className="flex items-center flex-col">
+          <div className="-mt-1 mb-1 flex items-center gap-2.5 flex-col">
+          <span className="grid h-9 w-9 place-items-center rounded-lg bg-gray-900 font-bold text-white">
+            H
+          </span>
+          <span className="text-[1.05rem] font-bold">Histr</span>
         </div>
 
         <div>
-          <h1>Welcome back</h1>
-          <p className="subtitle">Sign in to your Histr account.</p>
+          <h1 className="text-[1.4rem] font-bold">Welcome back</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Sign in to your Histr account.
+          </p>
         </div>
 
-        {error && <p className="auth-error">{error}</p>}
-
-        <a className="oauth-btn" href={googleOAuthUrl}>
-          <FcGoogle aria-hidden="true" />
+        </div>
+        <a className={oauthButtonClass} href={googleOAuthUrl}>
+          <FcGoogle className="h-5 w-5 shrink-0" aria-hidden="true" />
           <span>Continue with Google</span>
         </a>
 
-        <div className="auth-divider">
-          <span>or</span>
-        </div>
+        {/* Email/password login is temporarily disabled. */}
 
-        <div className="field">
-          <label htmlFor="login-username">Username</label>
-          <input
-            id="login-username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            autoComplete="username"
-            required
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="login-password">Password</label>
-          <input
-            id="login-password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </div>
-
-        <button type="submit" className="primary-btn" disabled={submitting}>
-          {submitting ? "Signing in…" : "Sign in"}
-        </button>
-
-        <p className="auth-switch">
-          Don't have an account?{" "}
-          <button type="button" onClick={onSwitch}>
-            Create one
-          </button>
-        </p>
-      </form>
+      
+      </div>
     </div>
   );
 }

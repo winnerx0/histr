@@ -13,21 +13,26 @@ import { AuthCallback } from "./AuthCallback";
 import { AuthProvider, useAuth } from "./auth";
 import { Landing } from "./Landing";
 import { Login } from "./Login";
-import { Register } from "./Register";
 import "./styles.css";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { token, bootstrapping } = useAuth();
-  if (bootstrapping) return <div className="auth-page" aria-busy="true" />;
+  if (bootstrapping)
+    return (
+      <div className="grid min-h-screen place-items-center" aria-busy="true" />
+    );
   if (!token) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { token, bootstrapping } = useAuth();
-  if (bootstrapping) return <div className="auth-page" aria-busy="true" />;
+  if (bootstrapping)
+    return (
+      <div className="grid min-h-screen place-items-center" aria-busy="true" />
+    );
   if (token) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
@@ -37,7 +42,7 @@ function LandingRoute() {
   return (
     <Landing
       onSignIn={() => navigate("/login")}
-      onGetStarted={() => navigate("/register")}
+      onGetStarted={() => navigate("/login")}
     />
   );
 }
@@ -46,16 +51,6 @@ function LoginRoute() {
   const navigate = useNavigate();
   return (
     <Login
-      onSwitch={() => navigate("/register")}
-      onBack={() => navigate("/")}
-    />
-  );
-}
-
-function RegisterRoute() {
-  const navigate = useNavigate();
-  return (
-    <Register
       onSwitch={() => navigate("/login")}
       onBack={() => navigate("/")}
     />
@@ -81,14 +76,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               element={
                 <PublicOnlyRoute>
                   <LoginRoute />
-                </PublicOnlyRoute>
-              }
-            />
-            <Route
-              path="/register"
-              element={
-                <PublicOnlyRoute>
-                  <RegisterRoute />
                 </PublicOnlyRoute>
               }
             />
