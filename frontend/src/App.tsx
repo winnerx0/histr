@@ -9,7 +9,6 @@ import {
   fetchCategorySummary,
   fetchStats,
   fetchTransactions,
-  fetchWorkerStatus,
   parseLocalDocuments,
   uploadTransactionDocument,
 } from "./api";
@@ -98,14 +97,7 @@ export function App() {
     queryFn: fetchCategorySummary,
   });
 
-  const statusQuery = useQuery({
-    queryKey: ["worker-status"],
-    queryFn: fetchWorkerStatus,
-    refetchInterval: 4000,
-  });
-
   const invalidateData = () => {
-    void queryClient.invalidateQueries({ queryKey: ["worker-status"] });
     void queryClient.invalidateQueries({ queryKey: ["transactions"] });
     void queryClient.invalidateQueries({ queryKey: ["stats"] });
     void queryClient.invalidateQueries({ queryKey: ["category-summary"] });
@@ -186,13 +178,6 @@ export function App() {
     return `conic-gradient(${stops})`;
   }, [pieSegments]);
 
-  const workerIsLive = useMemo(() => {
-    if (!statusQuery.data?.workerHeartbeat) return false;
-    const heartbeat = new Date(statusQuery.data.workerHeartbeat).getTime();
-    if (Number.isNaN(heartbeat)) return false;
-    return Date.now() - heartbeat < 20000;
-  }, [statusQuery.data?.workerHeartbeat]);
-
   return (
     <div className="min-h-screen">
       <div className="mx-auto w-full max-w-[1200px] p-6 max-sm:p-4">
@@ -210,21 +195,6 @@ export function App() {
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-                  workerIsLive
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-gray-200 text-gray-500"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    workerIsLive ? "bg-emerald-700" : "bg-gray-500"
-                  }`}
-                  aria-hidden="true"
-                />
-                {workerIsLive ? "Worker online" : "Worker idle"}
-              </span>
               <span className="inline-flex min-w-0 items-center gap-2 text-sm text-gray-500">
                 {profilePicture ? (
                   <img
@@ -342,35 +312,6 @@ export function App() {
                 {uploadMessage ? (
                   <p className="text-sm text-emerald-700">{uploadMessage}</p>
                 ) : null}
-              </section>
-
-              <section className={panelClass}>
-                <div className={panelHeadingClass}>
-                  <h2 className={panelTitleClass}>Processing</h2>
-                  <span className={panelKickerClass}>
-                    {workerIsLive ? "Live" : "Idle"}
-                  </span>
-                </div>
-                <dl className="grid gap-2">
-                  <div className="flex justify-between gap-2 text-sm">
-                    <dt className="text-gray-500">Queue depth</dt>
-                    <dd className="font-medium">
-                      {statusQuery.data?.queueDepth ?? 0}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-2 text-sm">
-                    <dt className="text-gray-500">Processed</dt>
-                    <dd className="font-medium">
-                      {statusQuery.data?.processedCount ?? 0}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between gap-2 text-sm">
-                    <dt className="text-gray-500">Heartbeat</dt>
-                    <dd className="font-medium">
-                      {statusQuery.data?.workerHeartbeat ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
               </section>
 
               <section className={panelClass}>

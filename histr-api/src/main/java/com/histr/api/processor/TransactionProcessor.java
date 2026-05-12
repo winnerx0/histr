@@ -16,9 +16,7 @@ import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -89,12 +87,6 @@ public class TransactionProcessor {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    @Value("${app.worker-heartbeat-key:worker:heartbeat}")
-    private String heartbeatKey;
-
-    @Value("${app.worker-processed-count-key:worker:processed_count}")
-    private String processedCountKey;
-
     private volatile boolean running = true;
     private Thread workerThread;
 
@@ -111,11 +103,6 @@ public class TransactionProcessor {
         if (workerThread != null) workerThread.interrupt();
     }
 
-    @Scheduled(fixedDelay = 5000)
-    void heartbeat() {
-        redis.opsForValue().set(heartbeatKey, Instant.now().toString());
-    }
-
     private void processLoop() {
         while (running) {
             try {
@@ -126,8 +113,6 @@ public class TransactionProcessor {
 
                 Map.Entry<String, List<List<String>>> data = objectMapper.readValue(json, new TypeReference<>() {});
                 parseTransactions(data);
-
-                heartbeat();
             } catch (Exception e) {
                 log.error("Error processing transaction batch", e);
             }
@@ -219,7 +204,6 @@ public class TransactionProcessor {
         }
 
         documentRepository.saveAll(documents);
-        redis.opsForValue().increment(processedCountKey, documents.size());
         log.info("Processed {} transactions", documents.size());
     }
 
@@ -250,14 +234,13 @@ public class TransactionProcessor {
         Matcher m = TRANSFER_RECIPIENT.matcher(d);
         if (m.matches()) return m.group(1).trim();
 
-        // "Airtime | 8168774440 | MTN" / "Betting | 09021453973 | SPORTYBET"
         Matcher p = PIPE_RECIPIENT.matcher(d);
         if (p.matches()) return p.group(1).trim();
 
         return null;
     }
 
-    private BigDecimal parseCurrency(String value) {
+    public BigDecimal parseCurrency(String value) {
         try {
             return new BigDecimal(value.replace("₦", "").replace(",", "").trim());
         } catch (NumberFormatException e) {

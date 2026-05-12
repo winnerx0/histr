@@ -23,12 +23,6 @@ export type CategorySummaryResponse = {
   data: { category: string; total: number; count: number }[];
 };
 
-export type WorkerStatusResponse = {
-  queueDepth: number;
-  workerHeartbeat: string | null;
-  processedCount: number;
-};
-
 export type AuthResponse = {
   accessToken: string;
   refreshToken: string;
@@ -238,12 +232,6 @@ export const fetchCategorySummary = async () => {
   const response = await authedFetch(`/categories/summary`);
   if (!response.ok) throw new Error("Unable to load category summary");
   return (await response.json()) as CategorySummaryResponse;
-};
-
-export const fetchWorkerStatus = async () => {
-  const response = await authedFetch(`/workers/status`);
-  if (!response.ok) throw new Error("Unable to load worker status");
-  return (await response.json()) as WorkerStatusResponse;
 };
 
 export const parseLocalDocuments = async () => {

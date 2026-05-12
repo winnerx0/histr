@@ -2,7 +2,6 @@ package com.histr.api.controller;
 
 import com.histr.api.dto.*;
 import com.histr.api.service.DocumentService;
-import com.histr.api.service.WorkerStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.MediaType;
@@ -21,7 +20,6 @@ import java.util.Map;
 public class DocumentController {
 
     private final DocumentService documentService;
-    private final WorkerStatusService workerStatusService;
 
     @GetMapping(value = "/parse", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> parseDocuments() {
@@ -72,8 +70,4 @@ public class DocumentController {
         return ResponseEntity.ok(documentService.getCategorySummary(search, startDate, endDate));
     }
 
-    @GetMapping(value = "/workers/status", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<WorkerStatusResponse> getWorkerStatus() {
-        return ResponseEntity.ok(workerStatusService.getStatus());
-    }
 }
