@@ -106,7 +106,6 @@ public class TransactionProcessor {
     private void processLoop() {
         while (running) {
             try {
-                log.info("Process loop running");
                 // BLPOP with 5s timeout so the thread can check 'running' on shutdown
                 String json = redis.opsForList().leftPop(QUEUE, 5, TimeUnit.SECONDS);
                 if (json == null) continue;
