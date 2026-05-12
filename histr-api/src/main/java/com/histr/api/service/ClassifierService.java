@@ -21,12 +21,6 @@ public class ClassifierService {
 
     public record TransactionClassificationInput(String description, String recipient, double amount) {}
 
-    public UUID classifyTransaction(String description, String recipient, double amount) {
-        return classifyTransactions(List.of(
-                new TransactionClassificationInput(description, recipient, amount)
-        )).getFirst();
-    }
-
     public List<UUID> classifyTransactions(List<TransactionClassificationInput> transactions) {
         if (transactions.isEmpty()) {
             return List.of();

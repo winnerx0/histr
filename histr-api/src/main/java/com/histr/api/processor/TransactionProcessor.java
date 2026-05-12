@@ -178,6 +178,7 @@ public class TransactionProcessor {
             }
             if (doc.getAmount() == null || doc.getAmount().signum() == 0) {
                 // skip rows where no amount could be extracted
+                log.info("this row skipped {}", doc);
                 continue;
             }
 
