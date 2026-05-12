@@ -1,7 +1,5 @@
 package com.histr.api.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.histr.api.dto.CategorySummaryResponse;
 import com.histr.api.dto.CategorySummaryRow;
 import com.histr.api.dto.PagedTransactionsResponse;
@@ -11,6 +9,7 @@ import com.histr.api.enums.Role;
 import com.histr.api.model.Category;
 import com.histr.api.model.Document;
 import com.histr.api.model.User;
+import com.histr.api.processor.TransactionProcessor;
 import com.histr.api.repository.DocumentRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,8 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.ListOperations;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -46,24 +43,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DocumentServiceTest {
 
-    private static final String TRANSACTIONS_QUEUE = "transactions";
-
-    @Mock
-    private ListOperations<String, String> listOperations;
-
     @Mock
     private DocumentRepository documentRepository;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
-
-    private TestStringRedisTemplate redis;
+    private CapturingTransactionProcessor transactionProcessor;
 
     private DocumentService documentService;
 
     @BeforeEach
     void setUp() {
-        redis = new TestStringRedisTemplate(listOperations);
-        documentService = new DocumentService(redis, objectMapper, documentRepository);
+        transactionProcessor = new CapturingTransactionProcessor();
+        documentService = new DocumentService(transactionProcessor, documentRepository);
         ReflectionTestUtils.setField(documentService, "maxUploadSizeMb", 15L);
 
         User user = new User();
@@ -82,7 +72,7 @@ class DocumentServiceTest {
     }
 
     @Test
-    void parseUploadedFileParsesCsvAndPushesRowsToRedis() throws Exception {
+    void parseUploadedFileParsesCsvAndProcessesRows() throws Exception {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "transactions.csv",
@@ -93,24 +83,13 @@ class DocumentServiceTest {
         Map<String, Object> result = documentService.parseUploadedFile(file);
 
         assertThat(result)
-                .containsEntry("message", "File parsed and queued for processing")
+                .containsEntry("message", "File parsed and processed successfully")
                 .containsEntry("fileName", "transactions.csv")
-                .containsEntry("queuedBatches", 1);
+                .containsEntry("processedBatches", 1);
 
-        ArgumentCaptor<String> payload = ArgumentCaptor.forClass(String.class);
-        verify(listOperations).leftPush(eq(TRANSACTIONS_QUEUE), payload.capture());
-
-        JsonNode queued = objectMapper.readTree(payload.getValue());
-        assertThat(queued.has("user-1")).isTrue();
-
-        List<List<String>> rows = objectMapper.convertValue(
-                queued.get("user-1"),
-                objectMapper.getTypeFactory().constructCollectionType(
-                        List.class,
-                        objectMapper.getTypeFactory().constructCollectionType(List.class, String.class)
-                )
-        );
-        assertThat(rows).containsExactly(
+        assertThat(transactionProcessor.calls).isEqualTo(1);
+        assertThat(transactionProcessor.userId).isEqualTo("user-1");
+        assertThat(transactionProcessor.data).containsExactly(
                 List.of("recipient", "amount", "description"),
                 List.of("Acme", "125.50", "Invoice payment")
         );
@@ -129,7 +108,7 @@ class DocumentServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("Only .xlsx and .csv files are supported");
 
-        assertThat(redis.opsForListCalled).isFalse();
+        assertThat(transactionProcessor.calls).isZero();
     }
 
     @Test
@@ -191,18 +170,20 @@ class DocumentServiceTest {
 //        assertThat(response.getData().getFirst().getCount()).isZero();
 //    }
 
-    private static class TestStringRedisTemplate extends StringRedisTemplate {
-        private final ListOperations<String, String> listOperations;
-        private boolean opsForListCalled;
+    private static class CapturingTransactionProcessor extends TransactionProcessor {
+        private int calls;
+        private String userId;
+        private List<List<String>> data;
 
-        private TestStringRedisTemplate(ListOperations<String, String> listOperations) {
-            this.listOperations = listOperations;
+        private CapturingTransactionProcessor() {
+            super(null, null, null, null, null);
         }
 
         @Override
-        public ListOperations<String, String> opsForList() {
-            opsForListCalled = true;
-            return listOperations;
+        public void processTransactions(String userId, List<List<String>> data) {
+            this.calls++;
+            this.userId = userId;
+            this.data = data;
         }
     }
 }

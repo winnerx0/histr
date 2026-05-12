@@ -1,9 +1,9 @@
 package com.histr.api.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.histr.api.dto.*;
 import com.histr.api.model.Document;
 import com.histr.api.model.User;
+import com.histr.api.processor.TransactionProcessor;
 import com.histr.api.repository.DocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,6 @@ import org.apache.poi.ss.usermodel.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,10 +38,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class DocumentService {
 
-    private static final String TRANSACTIONS_QUEUE = "transactions";
-
-    private final StringRedisTemplate redis;
-    private final ObjectMapper objectMapper;
+    private final TransactionProcessor transactionProcessor;
     private final DocumentRepository documentRepository;
 
     @Value("${app.upload-dir:uploads}")
@@ -58,20 +54,19 @@ public class DocumentService {
         File[] files = docsPath.toFile().listFiles(f ->
                 f.getName().matches("(?i).*\\.(xlsx|csv)"));
 
-        int queuedBatches = 0;
+        int processedBatches = 0;
         if (files != null) {
             for (File file : files) {
                 List<List<String>> data = parseFile(file.toPath(), file.getName());
                 if (!data.isEmpty()) {
                     User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-                    Map.Entry<String, List<List<String>>> userdata = Map.entry(user.getId(), data);
-                    pushToQueue(userdata);
-                    queuedBatches++;
+                    transactionProcessor.processTransactions(user.getId(), data);
+                    processedBatches++;
                 }
             }
         }
 
-        return Map.of("message", "Documents parsed successfully", "queuedBatches", queuedBatches);
+        return Map.of("message", "Documents parsed and processed successfully", "processedBatches", processedBatches);
     }
 
     public Map<String, Object> parseUploadedFile(MultipartFile file) throws IOException {
@@ -84,18 +79,17 @@ public class DocumentService {
         }
 
         List<List<String>> data = parseMultipartFile(file, filename);
-        int queuedBatches = 0;
+        int processedBatches = 0;
         if (!data.isEmpty()) {
             User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-            Map.Entry<String, List<List<String>>> userdata = Map.entry(user.getId(), data);
-            pushToQueue(userdata);
-            queuedBatches = 1;
+            transactionProcessor.processTransactions(user.getId(), data);
+            processedBatches = 1;
         }
 
         return Map.of(
-                "message", "File parsed and queued for processing",
+                "message", "File parsed and processed successfully",
                 "fileName", filename,
-                "queuedBatches", queuedBatches
+                "processedBatches", processedBatches
         );
     }
 
@@ -142,11 +136,6 @@ public class DocumentService {
             }
         }
         return rows;
-    }
-
-    private void pushToQueue(Map.Entry<String, List<List<String>>> data) throws IOException {
-        String json = objectMapper.writeValueAsString(data);
-        redis.opsForList().leftPush(TRANSACTIONS_QUEUE, json);
     }
 
     public PagedTransactionsResponse getTransactions(

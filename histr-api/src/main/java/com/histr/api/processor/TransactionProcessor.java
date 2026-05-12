@@ -1,7 +1,5 @@
 package com.histr.api.processor;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.histr.api.model.Document;
 import com.histr.api.model.User;
 import com.histr.api.repository.CategoryRepository;
@@ -11,12 +9,9 @@ import com.histr.api.service.ClassifierService;
 import com.histr.api.service.ClassifierService.TransactionClassificationInput;
 import com.histr.api.service.ColumnMapperService;
 import com.histr.api.service.ColumnMapperService.ColumnMapping;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -28,7 +23,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,8 +30,6 @@ import java.util.regex.Pattern;
 @Component
 @RequiredArgsConstructor
 public class TransactionProcessor {
-
-    private static final String QUEUE = "transactions";
 
     private static final Pattern TRANSFER_RECIPIENT = Pattern.compile(
             "(?i)^\\s*transfer\\s+(?:from|to)\\s+(.+?)\\s*$");
@@ -79,50 +71,19 @@ public class TransactionProcessor {
             DateTimeFormatter.ofPattern("dd-MMM-yy HH:mm:ss", Locale.ENGLISH)
     );
 
-    private final StringRedisTemplate redis;
-    private final ObjectMapper objectMapper;
     private final ClassifierService classifierService;
     private final ColumnMapperService columnMapperService;
     private final DocumentRepository documentRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
 
-    private volatile boolean running = true;
-    private Thread workerThread;
-
-    @PostConstruct
-    void start() {
-        workerThread = Thread.ofVirtual().name("transaction-worker").start(this::processLoop);
-        log.info("Transaction processor started");
+    public void processTransactions(String userId, List<List<String>> data) {
+        parseTransactions(userId, data);
     }
 
-    @PreDestroy
-    void stop() {
-        log.info("Transaction processor stopped");
-        running = false;
-        if (workerThread != null) workerThread.interrupt();
-    }
+    private void parseTransactions(String userId, List<List<String>> data) {
 
-    private void processLoop() {
-        while (running) {
-            try {
-                // BLPOP with 5s timeout so the thread can check 'running' on shutdown
-                String json = redis.opsForList().leftPop(QUEUE, 5, TimeUnit.SECONDS);
-                if (json == null) continue;
-
-                Map.Entry<String, List<List<String>>> data = objectMapper.readValue(json, new TypeReference<>() {});
-                parseTransactions(data);
-            } catch (Exception e) {
-                log.error("Error processing transaction batch", e);
-            }
-        }
-    }
-
-    private void parseTransactions(Map.Entry<String, List<List<String>>> userdata) {
-
-        User user = userRepository.findById(userdata.getKey()).orElseThrow(() -> new EntityNotFoundException("User not found"));
-
-        List<List<String>> data = userdata.getValue();
+        User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         log.info("Parsing now");
         List<Document> documents = new ArrayList<>();
@@ -161,6 +122,7 @@ public class TransactionProcessor {
                 } else if (!debit.isBlank() && !debit.equals("--")) {
                     doc.setAmount(parseCurrency(debit).negate());
                 }
+                log.info("document {} {}", doc.getCreatedAt(), doc.getAmount());
             }
 
             String recipient = cell(row, mapping.recipientCol());
@@ -182,7 +144,6 @@ public class TransactionProcessor {
             }
 
             documents.add(doc);
-            log.debug("Document {}", doc);
         }
 
         if (documents.isEmpty()) return;

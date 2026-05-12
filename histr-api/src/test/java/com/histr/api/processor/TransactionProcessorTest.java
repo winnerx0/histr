@@ -15,14 +15,11 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,8 +47,6 @@ class TransactionProcessorTest {
     @Test
     void parseTransactionsSavesOneDocumentWithValuesFromOneRow() {
         TransactionProcessor processor = new TransactionProcessor(
-                new StringRedisTemplate(),
-                objectMapper,
                 new ThrowingClassifierService(),
                 new ColumnMapperService(objectMapper, chatModel),
                 documentRepository,
@@ -68,7 +63,7 @@ class TransactionProcessorTest {
                 List.of("2026-05-11", "Transfer to Ada", "2,500.75", "Ada")
         );
 
-        ReflectionTestUtils.invokeMethod(processor, "parseTransactions", Map.entry("user-1", data));
+        processor.processTransactions("user-1", data);
 
         List<Document> savedDocuments = captureSavedDocuments();
         assertThat(savedDocuments).hasSize(1);
@@ -84,8 +79,6 @@ class TransactionProcessorTest {
     @Test
     void parseTransactionsFindsDateHeaderAnywhereInRow() {
         TransactionProcessor processor = new TransactionProcessor(
-                new StringRedisTemplate(),
-                objectMapper,
                 new ThrowingClassifierService(),
                 new ColumnMapperService(objectMapper, chatModel),
                 documentRepository,
@@ -104,7 +97,7 @@ class TransactionProcessorTest {
         user.setId("user-1");
         when(userRepository.findById("user-1")).thenReturn(Optional.of(user));
 
-        ReflectionTestUtils.invokeMethod(processor, "parseTransactions", Map.entry("user-1", data));
+        processor.processTransactions("user-1", data);
 
         List<Document> savedDocuments = captureSavedDocuments();
 
@@ -120,8 +113,6 @@ class TransactionProcessorTest {
     public void parseCurrencyWithDecimalPlaceSuccessfully(){
 
         TransactionProcessor processor = new TransactionProcessor(
-                new StringRedisTemplate(),
-                objectMapper,
                 new ThrowingClassifierService(),
                 new ColumnMapperService(objectMapper, chatModel),
                 documentRepository,
