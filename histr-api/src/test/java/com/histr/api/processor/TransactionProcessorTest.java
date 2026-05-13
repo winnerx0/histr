@@ -110,6 +110,39 @@ class TransactionProcessorTest {
     }
 
     @Test
+    void parseTransactionsSavesOwealthInterestRows() {
+        TransactionProcessor processor = new TransactionProcessor(
+                new ThrowingClassifierService(),
+                new ColumnMapperService(objectMapper, chatModel),
+                documentRepository,
+                categoryRepository,
+                userRepository
+        );
+
+        User user = new User();
+        user.setId("user-1");
+        when(userRepository.findById("user-1")).thenReturn(Optional.of(user));
+
+        List<List<String>> data = List.of(
+                List.of("Trans. Date", "Value Date", "Description", "Debit", "Credit", "Balance After", "Channel", "Reference"),
+                List.of("20 Dec 2025 02:44:08", "20 Dec 2025", "OWealth Interest Earned", "--", "2.41", "7,021.97", "Mobile", "2512209921hHI1H7UzbbOHs1mbqvJh"),
+                List.of("21 Dec 2025 01:46:03", "21 Dec 2025", "OWealth Interest Earned", "--", "2.41", "7,024.38", "Mobile", "251221992FIS8RzhoLyeQk5LnzRNib"),
+                List.of("22 Dec 2025 02:40:12", "22 Dec 2025", "OWealth Interest Earned", "--", "2.41", "7,026.79", "Mobile", "251222994J9iTOI8Llr2G2A9YWvB1k")
+        );
+
+        processor.processTransactions("user-1", data);
+
+        List<Document> savedDocuments = captureSavedDocuments();
+        assertThat(savedDocuments).hasSize(3);
+        assertThat(savedDocuments)
+                .allSatisfy(document -> {
+                    assertThat(document.getDescription()).isEqualTo("OWealth Interest Earned");
+                    assertThat(document.getAmount()).isEqualByComparingTo(new BigDecimal("2.41"));
+                    assertThat(document.getUser()).isSameAs(user);
+                });
+    }
+
+    @Test
     public void parseCurrencyWithDecimalPlaceSuccessfully(){
 
         TransactionProcessor processor = new TransactionProcessor(
